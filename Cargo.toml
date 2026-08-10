@@ -5,6 +5,7 @@ members = [
     "crates/tool-registry",
     "crates/policy-engine",
     "crates/execution-engine",
+    "crates/system-status",
 ]
 
 [workspace.package]
