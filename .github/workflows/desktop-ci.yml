@@ -41,6 +41,10 @@ jobs:
         working-directory: apps/desktop
         run: npm install
 
+      - name: Generate Tauri icons
+        working-directory: apps/desktop
+        run: npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.svg
+
       - name: Build frontend
         working-directory: apps/desktop
         run: npm run build
