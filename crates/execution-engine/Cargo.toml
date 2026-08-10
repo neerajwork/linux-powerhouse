@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 powerhouse-core = { path = "../powerhouse-core" }
 policy-engine = { path = "../policy-engine" }
+system-status = { path = "../system-status" }
 tool-registry = { path = "../tool-registry" }
 serde.workspace = true
 thiserror.workspace = true
