@@ -80,15 +80,15 @@ fn statvfs(mount_point: &str) -> Result<FilesystemStatus, StorageStatusError> {
         });
     }
     let stats = unsafe { stats.assume_init() };
-    let block = stats.f_frsize as u64;
-    let total = (stats.f_blocks as u64).saturating_mul(block);
-    let available = (stats.f_bavail as u64).saturating_mul(block);
-    let used = total.saturating_sub((stats.f_bfree as u64).saturating_mul(block));
-    let usage_percent = if total == 0 {
-        0
-    } else {
-        ((used.saturating_mul(100)) / total).min(100) as u8
-    };
+    let block = stats.f_frsize;
+    let total = stats.f_blocks.saturating_mul(block);
+    let available = stats.f_bavail.saturating_mul(block);
+    let used = total.saturating_sub(stats.f_bfree.saturating_mul(block));
+    let usage_percent = (used
+        .saturating_mul(100)
+        .checked_div(total)
+        .unwrap_or(0)
+        .min(100)) as u8;
     Ok(FilesystemStatus {
         mount_point: mount_point.into(),
         total_bytes: total,
