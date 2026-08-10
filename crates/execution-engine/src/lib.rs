@@ -4,13 +4,14 @@
 //! before a backend is invoked. Linux Powerhouse never gives the AI a raw
 //! shell as an execution primitive.
 
-use policy_engine::{Decision, PolicyContext, evaluate};
+use monitoring::{Monitor, MonitorSnapshot};
+use policy_engine::{evaluate, Decision, PolicyContext};
 use powerhouse_core::{ExecutionId, OperationStatus};
 use system_status::SystemStatus;
 use thiserror::Error;
 use tool_registry::{
-    ToolDefinition, network_status_tool, process_status_tool, storage_status_tool,
-    system_status_tool,
+    monitoring_status_tool, network_status_tool, process_status_tool, storage_status_tool,
+    system_status_tool, ToolDefinition,
 };
 
 #[derive(Debug, Error)]
@@ -27,6 +28,8 @@ pub enum ExecutionError {
     ProcessStatus(#[from] process_status::ProcessStatusError),
     #[error("network status backend failed: {0}")]
     NetworkStatus(#[from] network_status::NetworkStatusError),
+    #[error("monitoring backend failed: {0}")]
+    Monitoring(#[from] monitoring::MonitoringError),
 }
 
 #[derive(Debug, Clone)]
@@ -41,47 +44,38 @@ pub struct SystemStatusExecution {
     pub status: SystemStatus,
 }
 
-pub fn authorize(
-    tool: &ToolDefinition,
-    context: &PolicyContext,
-) -> Result<ExecutionResult, ExecutionError> {
+pub fn authorize(tool: &ToolDefinition, context: &PolicyContext) -> Result<ExecutionResult, ExecutionError> {
     match evaluate(tool, context) {
-        Decision::Allow => Ok(ExecutionResult {
-            execution_id: ExecutionId::new(),
-            status: OperationStatus::Success,
-        }),
+        Decision::Allow => Ok(ExecutionResult { execution_id: ExecutionId::new(), status: OperationStatus::Success }),
         Decision::RequireConfirmation => Err(ExecutionError::ConfirmationRequired),
         Decision::Deny => Err(ExecutionError::Denied),
     }
 }
 
-pub fn execute_system_status(
-    context: &PolicyContext,
-) -> Result<SystemStatusExecution, ExecutionError> {
+pub fn execute_system_status(context: &PolicyContext) -> Result<SystemStatusExecution, ExecutionError> {
     let execution = authorize(&system_status_tool(), context)?;
     let status = system_status::collect()?;
     Ok(SystemStatusExecution { execution, status })
 }
 
-pub fn execute_storage_status(
-    context: &PolicyContext,
-) -> Result<Vec<storage_status::FilesystemStatus>, ExecutionError> {
+pub fn execute_storage_status(context: &PolicyContext) -> Result<Vec<storage_status::FilesystemStatus>, ExecutionError> {
     authorize(&storage_status_tool(), context)?;
     Ok(storage_status::collect()?)
 }
 
-pub fn execute_process_status(
-    context: &PolicyContext,
-) -> Result<Vec<process_status::ProcessInfo>, ExecutionError> {
+pub fn execute_process_status(context: &PolicyContext) -> Result<Vec<process_status::ProcessInfo>, ExecutionError> {
     authorize(&process_status_tool(), context)?;
     Ok(process_status::collect(50)?)
 }
 
-pub fn execute_network_status(
-    context: &PolicyContext,
-) -> Result<Vec<network_status::NetworkInterface>, ExecutionError> {
+pub fn execute_network_status(context: &PolicyContext) -> Result<Vec<network_status::NetworkInterface>, ExecutionError> {
     authorize(&network_status_tool(), context)?;
     Ok(network_status::collect()?)
+}
+
+pub fn execute_monitoring_snapshot(context: &PolicyContext, monitor: &mut Monitor) -> Result<MonitorSnapshot, ExecutionError> {
+    authorize(&monitoring_status_tool(), context)?;
+    Ok(monitor.snapshot()?)
 }
 
 #[cfg(test)]
@@ -89,24 +83,17 @@ mod tests {
     use super::*;
 
     fn ai_context() -> PolicyContext {
-        PolicyContext {
-            ai_requested: true,
-            user_confirmed: false,
-        }
+        PolicyContext { ai_requested: true, user_confirmed: false }
     }
 
     #[test]
     fn read_only_dashboard_capabilities_execute_for_ai() {
         let context = ai_context();
-        assert!(
-            !execute_system_status(&context)
-                .unwrap()
-                .status
-                .kernel_version
-                .is_empty()
-        );
+        assert!(!execute_system_status(&context).unwrap().status.kernel_version.is_empty());
         assert!(!execute_storage_status(&context).unwrap().is_empty());
         assert!(!execute_process_status(&context).unwrap().is_empty());
         assert!(!execute_network_status(&context).unwrap().is_empty());
+        let mut monitor = Monitor::new();
+        assert!(execute_monitoring_snapshot(&context, &mut monitor).is_ok());
     }
 }
