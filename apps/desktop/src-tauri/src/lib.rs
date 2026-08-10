@@ -12,12 +12,17 @@ struct AppState {
 }
 
 fn context() -> PolicyContext {
-    PolicyContext { ai_requested: false, user_confirmed: false }
+    PolicyContext {
+        ai_requested: false,
+        user_confirmed: false,
+    }
 }
 
 #[tauri::command]
 fn system_status() -> Result<system_status::SystemStatus, String> {
-    execute_system_status(&context()).map(|result| result.status).map_err(|error| error.to_string())
+    execute_system_status(&context())
+        .map(|result| result.status)
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -37,20 +42,28 @@ fn network_status() -> Result<Vec<network_status::NetworkInterface>, String> {
 
 #[tauri::command]
 fn monitor_snapshot(state: tauri::State<'_, AppState>) -> Result<MonitorSnapshot, String> {
-    let mut monitor = state.monitor.lock().map_err(|_| "monitor state unavailable".to_owned())?;
+    let mut monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
     execute_monitoring_snapshot(&context(), &mut monitor).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 fn monitor_history(state: tauri::State<'_, AppState>) -> Result<Vec<MonitorSnapshot>, String> {
-    let monitor = state.monitor.lock().map_err(|_| "monitor state unavailable".to_owned())?;
+    let monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
     Ok(monitor.history())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(AppState { monitor: Mutex::new(Monitor::new()) })
+        .manage(AppState {
+            monitor: Mutex::new(Monitor::new()),
+        })
         .invoke_handler(tauri::generate_handler![
             system_status,
             storage_status,
