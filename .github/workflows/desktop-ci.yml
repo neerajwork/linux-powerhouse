@@ -37,9 +37,6 @@ jobs:
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
 
-      - name: Check desktop Rust crate
-        run: cargo check -p linux-powerhouse-desktop --all-features
-
       - name: Install frontend dependencies
         working-directory: apps/desktop
         run: npm install
@@ -47,3 +44,6 @@ jobs:
       - name: Build frontend
         working-directory: apps/desktop
         run: npm run build
+
+      - name: Check desktop Rust crate
+        run: cargo check -p linux-powerhouse-desktop --all-features
