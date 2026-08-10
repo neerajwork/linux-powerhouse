@@ -22,14 +22,18 @@ pub fn collect() -> Result<Vec<NetworkInterface>, NetworkStatusError> {
     let stats = fs::read_to_string("/proc/net/dev")?;
     let mut result = Vec::new();
     for line in stats.lines().skip(2) {
-        let Some((name, values)) = line.split_once(':') else { continue };
+        let Some((name, values)) = line.split_once(':') else {
+            continue;
+        };
         let values: Vec<&str> = values.split_whitespace().collect();
-        if values.len() < 9 { continue; }
+        if values.len() < 9 {
+            continue;
+        }
         let rx_bytes = values[0].parse().unwrap_or(0);
         let tx_bytes = values[8].parse().unwrap_or(0);
         let name = name.trim().to_owned();
-        let operstate = fs::read_to_string(format!("/sys/class/net/{name}/operstate"))
-            .unwrap_or_default();
+        let operstate =
+            fs::read_to_string(format!("/sys/class/net/{name}/operstate")).unwrap_or_default();
         result.push(NetworkInterface {
             name,
             is_up: operstate.trim() == "up",
