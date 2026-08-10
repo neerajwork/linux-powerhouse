@@ -1,0 +1,13 @@
+[package]
+name = "execution-engine"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+powerhouse-core = { path = "../powerhouse-core" }
+policy-engine = { path = "../policy-engine" }
+tool-registry = { path = "../tool-registry" }
+serde.workspace = true
+thiserror.workspace = true
