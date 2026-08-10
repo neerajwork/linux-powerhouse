@@ -1,0 +1,25 @@
+[package]
+name = "linux-powerhouse-desktop"
+version = "0.1.0"
+description = "Linux Powerhouse desktop application"
+authors = ["Linux Powerhouse contributors"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "linux_powerhouse_desktop_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.8", features = [] }
+execution-engine = { path = "../../../crates/execution-engine" }
+policy-engine = { path = "../../../crates/policy-engine" }
+serde.workspace = true
+serde_json.workspace = true
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
