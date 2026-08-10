@@ -6,6 +6,9 @@ members = [
     "crates/policy-engine",
     "crates/execution-engine",
     "crates/system-status",
+    "crates/storage-status",
+    "crates/process-status",
+    "crates/network-status",
     "apps/desktop/src-tauri",
 ]
 
@@ -21,3 +24,4 @@ serde_json = "1.0"
 thiserror = "2.0"
 uuid = { version = "1.18", features = ["v4", "serde"] }
 tracing = "0.1"
+libc = "0.2"
