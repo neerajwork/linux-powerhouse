@@ -64,3 +64,17 @@ pub fn system_status_tool() -> ToolDefinition {
     tool.ai_autonomous = true;
     tool
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn system_status_is_read_only_and_ai_safe() {
+        let tool = system_status_tool();
+        assert_eq!(tool.id, "system.status");
+        assert_eq!(tool.risk, RiskLevel::ReadOnly);
+        assert!(tool.ai_autonomous);
+        assert!(tool.permissions.iter().any(|p| p == "system.read"));
+    }
+}
