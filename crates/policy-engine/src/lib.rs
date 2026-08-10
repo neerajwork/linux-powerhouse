@@ -40,3 +40,36 @@ pub fn evaluate(tool: &ToolDefinition, context: &PolicyContext) -> Decision {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tool_registry::system_status_tool;
+
+    #[test]
+    fn read_only_tool_can_be_ai_requested() {
+        let tool = system_status_tool();
+        let context = PolicyContext {
+            ai_requested: true,
+            user_confirmed: false,
+        };
+        assert_eq!(evaluate(&tool, &context), Decision::Allow);
+    }
+
+    #[test]
+    fn destructive_tool_requires_confirmation() {
+        let tool = ToolDefinition::new(
+            "files.delete",
+            "0.1.0",
+            "Delete Files",
+            "Delete selected files.",
+            "files",
+            RiskLevel::Destructive,
+        );
+        let context = PolicyContext {
+            ai_requested: true,
+            user_confirmed: false,
+        };
+        assert_eq!(evaluate(&tool, &context), Decision::RequireConfirmation);
+    }
+}
