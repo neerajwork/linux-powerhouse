@@ -1,150 +1,83 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-type OperatingSystem = {
-  id: string | null;
-  name: string | null;
-  version: string | null;
-};
+type OperatingSystem = { id: string | null; name: string | null; version: string | null };
+type SystemStatus = { operating_system: OperatingSystem; kernel_version: string; architecture: string; hostname: string; cpu_model: string | null; cpu_logical_cores: number; memory_total_bytes: number; memory_available_bytes: number; swap_total_bytes: number; swap_free_bytes: number; uptime_seconds: number };
+type FilesystemStatus = { mount_point: string; total_bytes: number; available_bytes: number; used_bytes: number; usage_percent: number };
+type ProcessInfo = { pid: number; name: string; state: string; memory_bytes: number };
+type NetworkInterface = { name: string; is_up: boolean; rx_bytes: number; tx_bytes: number };
+type Section = "Dashboard" | "Storage" | "Processes" | "Network";
 
-type SystemStatus = {
-  operating_system: OperatingSystem;
-  kernel_version: string;
-  architecture: string;
-  hostname: string;
-  cpu_model: string | null;
-  cpu_logical_cores: number;
-  memory_total_bytes: number;
-  memory_available_bytes: number;
-  swap_total_bytes: number;
-  swap_free_bytes: number;
-  uptime_seconds: number;
-};
-
-function formatBytes(bytes: number): string {
+const formatBytes = (bytes: number) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes;
   let index = 0;
-  while (value >= 1024 && index < units.length - 1) {
-    value /= 1024;
-    index += 1;
-  }
+  while (value >= 1024 && index < units.length - 1) { value /= 1024; index += 1; }
   return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
-}
-
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86_400);
-  const hours = Math.floor((seconds % 86_400) / 3_600);
-  const minutes = Math.floor((seconds % 3_600) / 60);
-  return `${days}d ${hours}h ${minutes}m`;
-}
+};
+const formatUptime = (seconds: number) => `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 
 export default function App() {
-  const [status, setStatus] = useState<SystemStatus | null>(null);
+  const [section, setSection] = useState<Section>("Dashboard");
+  const [system, setSystem] = useState<SystemStatus | null>(null);
+  const [storage, setStorage] = useState<FilesystemStatus[]>([]);
+  const [processes, setProcesses] = useState<ProcessInfo[]>([]);
+  const [network, setNetwork] = useState<NetworkInterface[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadSystemStatus() {
+  async function refresh() {
     setLoading(true);
     setError(null);
     try {
-      const result = await invoke<SystemStatus>("system_status");
-      setStatus(result);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setLoading(false);
-    }
+      const [nextSystem, nextStorage, nextProcesses, nextNetwork] = await Promise.all([
+        invoke<SystemStatus>("system_status"),
+        invoke<FilesystemStatus[]>("storage_status"),
+        invoke<ProcessInfo[]>("process_status"),
+        invoke<NetworkInterface[]>("network_status"),
+      ]);
+      setSystem(nextSystem); setStorage(nextStorage); setProcesses(nextProcesses); setNetwork(nextNetwork);
+    } catch (err) { setError(String(err)); } finally { setLoading(false); }
   }
+
+  useEffect(() => { void refresh(); }, []);
 
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark">LP</div>
-          <div>
-            <strong>Linux Powerhouse</strong>
-            <span>Powerful Linux. Simplified.</span>
-          </div>
-        </div>
+        <div className="brand"><div className="brand-mark">LP</div><div><strong>Linux Powerhouse</strong><span>Powerful Linux. Simplified.</span></div></div>
         <nav>
-          <button className="nav-item active">Dashboard</button>
-          <button className="nav-item">System</button>
-          <button className="nav-item">Storage</button>
-          <button className="nav-item">Processes</button>
-          <button className="nav-item">Services</button>
-          <button className="nav-item">Network</button>
-          <button className="nav-item">Security</button>
-          <button className="nav-item">AI Assistant</button>
+          {(["Dashboard", "Storage", "Processes", "Network"] as Section[]).map((item) => (
+            <button key={item} className={`nav-item ${section === item ? "active" : ""}`} onClick={() => setSection(item)}>{item}</button>
+          ))}
+          <button className="nav-item" disabled>Services</button>
+          <button className="nav-item" disabled>Security</button>
+          <button className="nav-item" disabled>AI Assistant</button>
         </nav>
       </aside>
 
       <section className="content">
         <header className="header">
-          <div>
-            <p className="eyebrow">SYSTEM DASHBOARD</p>
-            <h1>Welcome to Linux Powerhouse</h1>
-            <p className="subtitle">A safe, human-friendly window into your Linux system.</p>
-          </div>
-          <button className="primary" onClick={loadSystemStatus} disabled={loading}>
-            {loading ? "Reading system…" : "Refresh system"}
-          </button>
+          <div><p className="eyebrow">{section.toUpperCase()}</p><h1>{section === "Dashboard" ? "Your Linux system, at a glance." : section}</h1><p className="subtitle">Read-only insights, collected through Linux-native capabilities.</p></div>
+          <button className="primary" onClick={() => void refresh()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
         </header>
+        {error && <div className="error">Unable to refresh system data: {error}</div>}
 
-        {error && <div className="error">Unable to read system status: {error}</div>}
-
-        {!status && !loading && !error && (
-          <section className="welcome-card">
-            <div>
-              <span className="status-dot" />
-              <h2>Your Linux system, made understandable.</h2>
-              <p>Start with a read-only system snapshot. Nothing is changed and no shell command is executed.</p>
-            </div>
-            <button className="primary" onClick={loadSystemStatus}>Get system status</button>
+        {section === "Dashboard" && system && (
+          <section className="grid">
+            <article className="card wide"><span className="label">OPERATING SYSTEM</span><strong>{system.operating_system.name ?? "Linux"}</strong><span>{system.operating_system.version ?? "Version unavailable"} · {system.architecture}</span></article>
+            <article className="card"><span className="label">KERNEL</span><strong>{system.kernel_version}</strong><span>{system.hostname}</span></article>
+            <article className="card"><span className="label">MEMORY</span><strong>{formatBytes(system.memory_available_bytes)}</strong><span>available of {formatBytes(system.memory_total_bytes)}</span></article>
+            <article className="card"><span className="label">UPTIME</span><strong>{formatUptime(system.uptime_seconds)}</strong><span>{system.cpu_logical_cores} logical CPU cores</span></article>
+            <article className="card wide"><span className="label">STORAGE</span><strong>{storage.length} filesystems</strong><span>{storage.filter((item) => item.usage_percent >= 90).length} critically full · {storage.filter((item) => item.usage_percent >= 75).length} above 75%</span></article>
+            <article className="card"><span className="label">NETWORK</span><strong>{network.filter((item) => item.is_up).length} active</strong><span>{network.length} interfaces detected</span></article>
+            <article className="card wide"><span className="label">PROCESSES</span><strong>{processes.length} top processes</strong><span>Sorted by resident memory · read-only snapshot</span></article>
           </section>
         )}
 
-        {status && (
-          <>
-            <section className="grid">
-              <article className="card wide">
-                <span className="label">OPERATING SYSTEM</span>
-                <strong>{status.operating_system.name ?? "Linux"}</strong>
-                <span>{status.operating_system.version ?? "Version unavailable"}</span>
-              </article>
-              <article className="card">
-                <span className="label">KERNEL</span>
-                <strong>{status.kernel_version}</strong>
-                <span>{status.architecture}</span>
-              </article>
-              <article className="card">
-                <span className="label">HOSTNAME</span>
-                <strong>{status.hostname}</strong>
-                <span>{status.cpu_logical_cores} logical CPU cores</span>
-              </article>
-              <article className="card wide">
-                <span className="label">MEMORY</span>
-                <strong>{formatBytes(status.memory_available_bytes)} available</strong>
-                <span>{formatBytes(status.memory_total_bytes)} total</span>
-              </article>
-              <article className="card">
-                <span className="label">SWAP</span>
-                <strong>{formatBytes(status.swap_free_bytes)} free</strong>
-                <span>{formatBytes(status.swap_total_bytes)} total</span>
-              </article>
-              <article className="card">
-                <span className="label">UPTIME</span>
-                <strong>{formatUptime(status.uptime_seconds)}</strong>
-                <span>System uptime</span>
-              </article>
-              <article className="card wide">
-                <span className="label">PROCESSOR</span>
-                <strong>{status.cpu_model ?? "CPU information unavailable"}</strong>
-                <span>{status.cpu_logical_cores} logical cores</span>
-              </article>
-            </section>
-          </>
-        )}
+        {section === "Storage" && <section className="list">{storage.map((item) => <article className="row" key={item.mount_point}><div><strong>{item.mount_point}</strong><span>{formatBytes(item.available_bytes)} available of {formatBytes(item.total_bytes)}</span></div><b>{item.usage_percent}%</b></article>)}</section>}
+        {section === "Processes" && <section className="list">{processes.map((item) => <article className="row" key={item.pid}><div><strong>{item.name}</strong><span>PID {item.pid} · {item.state}</span></div><b>{formatBytes(item.memory_bytes)}</b></article>)}</section>}
+        {section === "Network" && <section className="list">{network.map((item) => <article className="row" key={item.name}><div><strong>{item.name}</strong><span>{item.is_up ? "Link up" : "Link down"}</span></div><b>↓ {formatBytes(item.rx_bytes)} · ↑ {formatBytes(item.tx_bytes)}</b></article>)}</section>}
       </section>
     </main>
   );
