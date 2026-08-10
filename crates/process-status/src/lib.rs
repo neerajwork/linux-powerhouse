@@ -22,20 +22,36 @@ pub struct ProcessInfo {
 pub fn collect(limit: usize) -> Result<Vec<ProcessInfo>, ProcessStatusError> {
     let mut processes = Vec::new();
     for entry in fs::read_dir("/proc")? {
-        let entry = match entry { Ok(value) => value, Err(_) => continue };
+        let entry = match entry {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if name.is_empty() || !name.bytes().all(|b| b.is_ascii_digit()) { continue; }
-        let pid = match name.parse::<u32>() { Ok(value) => value, Err(_) => continue };
+        if name.is_empty() || !name.bytes().all(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        let pid = match name.parse::<u32>() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
         let status_path = entry.path().join("status");
-        let content = match fs::read_to_string(status_path) { Ok(value) => value, Err(_) => continue };
+        let content = match fs::read_to_string(status_path) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
         let process_name = field(&content, "Name:").unwrap_or_else(|| "unknown".into());
         let state = field(&content, "State:").unwrap_or_else(|| "unknown".into());
         let memory_bytes = field(&content, "VmRSS:")
             .and_then(|value| value.split_whitespace().next()?.parse::<u64>().ok())
             .unwrap_or(0)
             .saturating_mul(1024);
-        processes.push(ProcessInfo { pid, name: process_name, state, memory_bytes });
+        processes.push(ProcessInfo {
+            pid,
+            name: process_name,
+            state,
+            memory_bytes,
+        });
     }
     processes.sort_by(|a, b| b.memory_bytes.cmp(&a.memory_bytes));
     processes.truncate(limit);
@@ -43,7 +59,9 @@ pub fn collect(limit: usize) -> Result<Vec<ProcessInfo>, ProcessStatusError> {
 }
 
 fn field(content: &str, key: &str) -> Option<String> {
-    content.lines().find_map(|line| line.strip_prefix(key).map(|value| value.trim().to_owned()))
+    content
+        .lines()
+        .find_map(|line| line.strip_prefix(key).map(|value| value.trim().to_owned()))
 }
 
 #[cfg(test)]
