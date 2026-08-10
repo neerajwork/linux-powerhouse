@@ -4,7 +4,7 @@
 //! backends will be introduced only after the Tool Registry and policy
 //! contracts are covered by tests.
 
-use policy_engine::{evaluate, Decision, PolicyContext};
+use policy_engine::{Decision, PolicyContext, evaluate};
 use powerhouse_core::{ExecutionId, OperationStatus};
 use thiserror::Error;
 use tool_registry::ToolDefinition;
