@@ -6,6 +6,7 @@ members = [
     "crates/policy-engine",
     "crates/execution-engine",
     "crates/system-status",
+    "apps/desktop/src-tauri",
 ]
 
 [workspace.package]
