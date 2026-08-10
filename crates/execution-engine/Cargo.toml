@@ -9,6 +9,9 @@ license.workspace = true
 powerhouse-core = { path = "../powerhouse-core" }
 policy-engine = { path = "../policy-engine" }
 system-status = { path = "../system-status" }
+storage-status = { path = "../storage-status" }
+process-status = { path = "../process-status" }
+network-status = { path = "../network-status" }
 tool-registry = { path = "../tool-registry" }
 serde.workspace = true
 thiserror.workspace = true
