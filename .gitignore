@@ -1,0 +1,46 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+.tauri/
+*.log
+
+# Tauri / generated artifacts
+src-tauri/target/
+
+# IDEs and editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local AI/model artifacts
+models/
+*.gguf
+*.safetensors
+
+# Test / coverage
+coverage/
+*.profraw
+
+# Temporary files
+.tmp/
+tmp/
