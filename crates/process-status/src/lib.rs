@@ -53,7 +53,7 @@ pub fn collect(limit: usize) -> Result<Vec<ProcessInfo>, ProcessStatusError> {
             memory_bytes,
         });
     }
-    processes.sort_by(|a, b| b.memory_bytes.cmp(&a.memory_bytes));
+    processes.sort_by_key(|b| std::cmp::Reverse(b.memory_bytes));
     processes.truncate(limit);
     Ok(processes)
 }
