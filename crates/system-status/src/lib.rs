@@ -17,7 +17,10 @@ const HOSTNAME_PATH: &str = "/etc/hostname";
 #[derive(Debug, Error)]
 pub enum SystemStatusError {
     #[error("failed to read {path}: {source}")]
-    Read { path: &'static str, source: std::io::Error },
+    Read {
+        path: &'static str,
+        source: std::io::Error,
+    },
     #[error("invalid value in {path}: {value}")]
     InvalidValue { path: &'static str, value: String },
 }
@@ -63,9 +66,11 @@ pub fn collect() -> Result<SystemStatus, SystemStatusError> {
         version: os_release_value(&os_release, "VERSION_ID").map(str::to_owned),
     };
 
-    let cpu_model = cpu_info
-        .lines()
-        .find_map(|line| line.strip_prefix("model name\t:").map(str::trim).map(str::to_owned));
+    let cpu_model = cpu_info.lines().find_map(|line| {
+        line.strip_prefix("model name\t:")
+            .map(str::trim)
+            .map(str::to_owned)
+    });
     let cpu_logical_cores = cpu_info
         .lines()
         .filter(|line| line.starts_with("processor\t:"))
@@ -118,10 +123,12 @@ fn meminfo_kib(content: &str, key: &str) -> Result<u64, SystemStatusError> {
             value: line.to_owned(),
         })?;
 
-    value.parse::<u64>().map_err(|_| SystemStatusError::InvalidValue {
-        path: MEM_INFO_PATH,
-        value: line.to_owned(),
-    })
+    value
+        .parse::<u64>()
+        .map_err(|_| SystemStatusError::InvalidValue {
+            path: MEM_INFO_PATH,
+            value: line.to_owned(),
+        })
 }
 
 fn parse_uptime_seconds(content: &str) -> Result<u64, SystemStatusError> {
@@ -156,7 +163,10 @@ mod tests {
     fn parses_os_release_values() {
         let content = "NAME=Linux\nID=example\nPRETTY_NAME=\"Example Linux\"\nVERSION_ID=\"1.2\"\n";
         assert_eq!(os_release_value(content, "ID"), Some("example"));
-        assert_eq!(os_release_value(content, "PRETTY_NAME"), Some("Example Linux"));
+        assert_eq!(
+            os_release_value(content, "PRETTY_NAME"),
+            Some("Example Linux")
+        );
         assert_eq!(os_release_value(content, "VERSION_ID"), Some("1.2"));
     }
 
