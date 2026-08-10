@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::VecDeque,
     fs,
-    time::{Duration, Instant},
+    time::Instant,
 };
 use thiserror::Error;
 
@@ -97,8 +97,8 @@ impl Monitor {
             None => (
                 0.0,
                 network
-                    .iter()
-                    .map(|(name, _)| NetworkRate {
+                    .keys()
+                    .map(|name| NetworkRate {
                         name: name.clone(),
                         rx_bytes_per_second: 0.0,
                         tx_bytes_per_second: 0.0,
