@@ -24,11 +24,14 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      # The Tauri desktop crate is validated by Desktop CI after the
+      # frontend is built. Keeping it out of this workspace-only job
+      # prevents frontend artifacts from becoming a Rust CI prerequisite.
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --exclude linux-powerhouse-desktop --all-targets --all-features -- -D warnings
 
       - name: Test
-        run: cargo test --workspace --all-features
+        run: cargo test --workspace --exclude linux-powerhouse-desktop --all-features
 
       - name: Check
-        run: cargo check --workspace --all-features
+        run: cargo check --workspace --exclude linux-powerhouse-desktop --all-features
