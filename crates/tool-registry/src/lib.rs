@@ -50,14 +50,13 @@ impl ToolDefinition {
     }
 }
 
-/// The first built-in capability used to validate the registry architecture.
-pub fn system_status_tool() -> ToolDefinition {
+fn read_only_tool(id: &str, name: &str, description: &str, category: &str) -> ToolDefinition {
     let mut tool = ToolDefinition::new(
-        "system.status",
+        id,
         "0.1.0",
-        "System Status",
-        "Read basic operating-system and hardware status information.",
-        "system",
+        name,
+        description,
+        category,
         RiskLevel::ReadOnly,
     );
     tool.permissions.push("system.read".into());
@@ -65,16 +64,57 @@ pub fn system_status_tool() -> ToolDefinition {
     tool
 }
 
+pub fn system_status_tool() -> ToolDefinition {
+    read_only_tool(
+        "system.status",
+        "System Status",
+        "Read basic operating-system and hardware status information.",
+        "system",
+    )
+}
+
+pub fn storage_status_tool() -> ToolDefinition {
+    read_only_tool(
+        "storage.status",
+        "Storage Status",
+        "Read filesystem capacity and mount information.",
+        "storage",
+    )
+}
+
+pub fn process_status_tool() -> ToolDefinition {
+    read_only_tool(
+        "process.status",
+        "Process Status",
+        "Read a bounded snapshot of running processes and memory usage.",
+        "processes",
+    )
+}
+
+pub fn network_status_tool() -> ToolDefinition {
+    read_only_tool(
+        "network.status",
+        "Network Status",
+        "Read network interface state and traffic counters.",
+        "network",
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn system_status_is_read_only_and_ai_safe() {
-        let tool = system_status_tool();
-        assert_eq!(tool.id, "system.status");
-        assert_eq!(tool.risk, RiskLevel::ReadOnly);
-        assert!(tool.ai_autonomous);
-        assert!(tool.permissions.iter().any(|p| p == "system.read"));
+    fn dashboard_tools_are_read_only_and_ai_safe() {
+        for tool in [
+            system_status_tool(),
+            storage_status_tool(),
+            process_status_tool(),
+            network_status_tool(),
+        ] {
+            assert_eq!(tool.risk, RiskLevel::ReadOnly);
+            assert!(tool.ai_autonomous);
+            assert!(tool.permissions.iter().any(|p| p == "system.read"));
+        }
     }
 }

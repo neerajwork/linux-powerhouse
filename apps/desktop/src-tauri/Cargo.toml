@@ -19,6 +19,9 @@ tauri = { version = "2.8", features = [] }
 execution-engine = { path = "../../../crates/execution-engine" }
 policy-engine = { path = "../../../crates/policy-engine" }
 system-status = { path = "../../../crates/system-status" }
+storage-status = { path = "../../../crates/storage-status" }
+process-status = { path = "../../../crates/process-status" }
+network-status = { path = "../../../crates/network-status" }
 serde.workspace = true
 serde_json.workspace = true
 

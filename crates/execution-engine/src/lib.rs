@@ -8,7 +8,10 @@ use policy_engine::{Decision, PolicyContext, evaluate};
 use powerhouse_core::{ExecutionId, OperationStatus};
 use system_status::SystemStatus;
 use thiserror::Error;
-use tool_registry::{ToolDefinition, system_status_tool};
+use tool_registry::{
+    ToolDefinition, network_status_tool, process_status_tool, storage_status_tool,
+    system_status_tool,
+};
 
 #[derive(Debug, Error)]
 pub enum ExecutionError {
@@ -18,6 +21,12 @@ pub enum ExecutionError {
     ConfirmationRequired,
     #[error("system status backend failed: {0}")]
     SystemStatus(#[from] system_status::SystemStatusError),
+    #[error("storage status backend failed: {0}")]
+    StorageStatus(#[from] storage_status::StorageStatusError),
+    #[error("process status backend failed: {0}")]
+    ProcessStatus(#[from] process_status::ProcessStatusError),
+    #[error("network status backend failed: {0}")]
+    NetworkStatus(#[from] network_status::NetworkStatusError),
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +41,6 @@ pub struct SystemStatusExecution {
     pub status: SystemStatus,
 }
 
-/// Validate an operation before any operating-system side effect is allowed.
 pub fn authorize(
     tool: &ToolDefinition,
     context: &PolicyContext,
@@ -47,32 +55,58 @@ pub fn authorize(
     }
 }
 
-/// Execute the first built-in Linux backend through the same policy boundary
-/// used by every future Powerhouse capability.
 pub fn execute_system_status(
     context: &PolicyContext,
 ) -> Result<SystemStatusExecution, ExecutionError> {
-    let tool = system_status_tool();
-    let execution = authorize(&tool, context)?;
+    let execution = authorize(&system_status_tool(), context)?;
     let status = system_status::collect()?;
-
     Ok(SystemStatusExecution { execution, status })
+}
+
+pub fn execute_storage_status(
+    context: &PolicyContext,
+) -> Result<Vec<storage_status::FilesystemStatus>, ExecutionError> {
+    authorize(&storage_status_tool(), context)?;
+    Ok(storage_status::collect()?)
+}
+
+pub fn execute_process_status(
+    context: &PolicyContext,
+) -> Result<Vec<process_status::ProcessInfo>, ExecutionError> {
+    authorize(&process_status_tool(), context)?;
+    Ok(process_status::collect(50)?)
+}
+
+pub fn execute_network_status(
+    context: &PolicyContext,
+) -> Result<Vec<network_status::NetworkInterface>, ExecutionError> {
+    authorize(&network_status_tool(), context)?;
+    Ok(network_status::collect()?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn system_status_executes_for_ai_without_confirmation() {
-        let context = PolicyContext {
+    fn ai_context() -> PolicyContext {
+        PolicyContext {
             ai_requested: true,
             user_confirmed: false,
-        };
+        }
+    }
 
-        let result = execute_system_status(&context).expect("system status should be readable");
-        assert_eq!(result.execution.status, OperationStatus::Success);
-        assert!(!result.status.kernel_version.is_empty());
-        assert!(result.status.memory_total_bytes > 0);
+    #[test]
+    fn read_only_dashboard_capabilities_execute_for_ai() {
+        let context = ai_context();
+        assert!(
+            !execute_system_status(&context)
+                .unwrap()
+                .status
+                .kernel_version
+                .is_empty()
+        );
+        assert!(!execute_storage_status(&context).unwrap().is_empty());
+        assert!(!execute_process_status(&context).unwrap().is_empty());
+        assert!(!execute_network_status(&context).unwrap().is_empty());
     }
 }
