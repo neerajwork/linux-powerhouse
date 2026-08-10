@@ -16,19 +16,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install Tauri Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            curl \
-            file \
-            libayatana-appindicator3-dev \
-            libssl-dev \
-            libwebkit2gtk-4.1-dev \
-            libxdo-dev \
-            librsvg2-dev
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -37,15 +24,14 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Generate Tauri icons
-        working-directory: apps/desktop
-        run: npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.svg
-
+      # The Tauri desktop crate is validated by Desktop CI after the
+      # frontend is built. Keeping it out of this workspace-only job
+      # prevents frontend artifacts from becoming a Rust CI prerequisite.
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --exclude linux-powerhouse-desktop --all-targets --all-features -- -D warnings
 
       - name: Test
-        run: cargo test --workspace --all-features
+        run: cargo test --workspace --exclude linux-powerhouse-desktop --all-features
 
       - name: Check
-        run: cargo check --workspace --all-features
+        run: cargo check --workspace --exclude linux-powerhouse-desktop --all-features
