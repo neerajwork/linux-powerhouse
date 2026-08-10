@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://linux-powerhouse.dev/schemas/tool-definition.schema.json",
+  "title": "Linux Powerhouse Tool Definition",
+  "type": "object",
+  "required": [
+    "id",
+    "version",
+    "name",
+    "description",
+    "category",
+    "risk",
+    "permissions",
+    "ai_autonomous"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:\\.[a-z0-9_-]+)+$" },
+    "version": { "type": "string" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "category": { "type": "string", "minLength": 1 },
+    "risk": {
+      "type": "string",
+      "enum": [
+        "ReadOnly",
+        "Low",
+        "Reversible",
+        "Moderate",
+        "Destructive",
+        "SystemCritical"
+      ]
+    },
+    "permissions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "ai_autonomous": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
