@@ -5,7 +5,7 @@
 //! anomaly signals. It never terminates, pauses, or mutates processes.
 
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, io, path::PathBuf};
+use std::{collections::HashMap, fs, io, path::{Path, PathBuf}};
 use thiserror::Error;
 
 const PROC: &str = "/proc";
@@ -183,7 +183,7 @@ pub fn analyze_with_limits(
     })
 }
 
-fn read_process(path: &PathBuf, pid: u32) -> Result<RawProcess, io::Error> {
+fn read_process(path: &Path, pid: u32) -> Result<RawProcess, io::Error> {
     let status = fs::read_to_string(path.join("status"))?;
     let stat = fs::read_to_string(path.join("stat"))?;
     let name = field(&status, "Name:").unwrap_or_else(|| "unknown".into());
