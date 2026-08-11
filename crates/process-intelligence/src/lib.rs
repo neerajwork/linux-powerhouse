@@ -192,9 +192,9 @@ fn read_process(path: &PathBuf, pid: u32) -> Result<RawProcess, io::Error> {
         .unwrap_or(0)
         .saturating_mul(1024);
 
-    let (_, fields) = stat.split_once(')').ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidData, "invalid /proc/<pid>/stat")
-    })?;
+    let (_, fields) = stat
+        .split_once(')')
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "invalid /proc/<pid>/stat"))?;
     let fields: Vec<&str> = fields.split_whitespace().collect();
     if fields.len() < 20 {
         return Err(io::Error::new(
@@ -218,10 +218,11 @@ fn read_process(path: &PathBuf, pid: u32) -> Result<RawProcess, io::Error> {
 }
 
 fn read_memory_total() -> Result<u64, ProcessIntelligenceError> {
-    let content = fs::read_to_string(MEM_INFO).map_err(|source| ProcessIntelligenceError::Read {
-        path: MEM_INFO.into(),
-        source,
-    })?;
+    let content =
+        fs::read_to_string(MEM_INFO).map_err(|source| ProcessIntelligenceError::Read {
+            path: MEM_INFO.into(),
+            source,
+        })?;
     let kilobytes = content
         .lines()
         .find(|line| line.starts_with("MemTotal:"))
