@@ -4,14 +4,15 @@
 //! before a backend is invoked. Linux Powerhouse never gives the AI a raw
 //! shell as an execution primitive.
 
+use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::{Decision, PolicyContext, evaluate};
 use powerhouse_core::{ExecutionId, OperationStatus};
 use system_status::SystemStatus;
 use thiserror::Error;
 use tool_registry::{
-    ToolDefinition, monitoring_status_tool, network_status_tool, process_status_tool,
-    storage_status_tool, system_status_tool,
+    ToolDefinition, health_status_tool, monitoring_status_tool, network_status_tool,
+    process_status_tool, storage_status_tool, system_status_tool,
 };
 
 #[derive(Debug, Error)]
@@ -30,6 +31,8 @@ pub enum ExecutionError {
     NetworkStatus(#[from] network_status::NetworkStatusError),
     #[error("monitoring backend failed: {0}")]
     Monitoring(#[from] monitoring::MonitoringError),
+    #[error("health evaluation failed: {0}")]
+    Health(#[from] health_status::HealthStatusError),
 }
 
 #[derive(Debug, Clone)]
@@ -95,6 +98,15 @@ pub fn execute_monitoring_snapshot(
     Ok(monitor.snapshot()?)
 }
 
+pub fn execute_health_status(
+    context: &PolicyContext,
+    monitoring: Option<&MonitorSnapshot>,
+    max_storage_usage: Option<u8>,
+) -> Result<HealthSnapshot, ExecutionError> {
+    authorize(&health_status_tool(), context)?;
+    Ok(health_status::evaluate(monitoring, max_storage_usage)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,5 +133,7 @@ mod tests {
         assert!(!execute_network_status(&context).unwrap().is_empty());
         let mut monitor = Monitor::new();
         assert!(execute_monitoring_snapshot(&context, &mut monitor).is_ok());
+        let snapshot = monitor.snapshot().unwrap();
+        assert!(execute_health_status(&context, Some(&snapshot), Some(50)).is_ok());
     }
 }
