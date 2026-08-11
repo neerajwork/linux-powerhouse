@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs, io,
-    path::{Path, PathBuf},
+    path::Path,
 };
 use thiserror::Error;
 
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn invalid_stat_is_rejected() {
-        let path = PathBuf::from("/tmp/linux-powerhouse-process-intelligence-no-such-pid");
+        let path = std::path::PathBuf::from("/tmp/linux-powerhouse-process-intelligence-no-such-pid");
         let result = read_process(&path, 1);
         assert!(result.is_err());
     }
