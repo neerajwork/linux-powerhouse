@@ -160,10 +160,8 @@ mod tests {
 
     #[test]
     fn parses_service_inventory_line() {
-        let service = parse_unit_line(
-            "ssh.service loaded active running OpenSSH server daemon",
-        )
-        .unwrap();
+        let service =
+            parse_unit_line("ssh.service loaded active running OpenSSH server daemon").unwrap();
         assert_eq!(service.name, "ssh.service");
         assert_eq!(service.active_state, "active");
         assert_eq!(service.sub_state, "running");
@@ -172,6 +170,8 @@ mod tests {
 
     #[test]
     fn ignores_non_service_units() {
-        assert!(parse_unit_line("multi-user.target loaded active active Multi-User System").is_none());
+        assert!(
+            parse_unit_line("multi-user.target loaded active active Multi-User System").is_none()
+        );
     }
 }
