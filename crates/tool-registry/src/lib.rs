@@ -73,6 +73,17 @@ pub fn system_status_tool() -> ToolDefinition {
     )
 }
 
+pub fn unified_system_intelligence_tool() -> ToolDefinition {
+    let mut tool = read_only_tool(
+        "system.intelligence",
+        "Unified System Intelligence",
+        "Aggregate bounded storage, process, network, and service signals into one system health snapshot.",
+        "system",
+    );
+    tool.permissions.push("filesystem.read".into());
+    tool
+}
+
 pub fn storage_status_tool() -> ToolDefinition {
     read_only_tool(
         "storage.status",
@@ -182,6 +193,7 @@ mod tests {
     fn dashboard_tools_are_read_only_and_ai_safe() {
         for tool in [
             system_status_tool(),
+            unified_system_intelligence_tool(),
             storage_status_tool(),
             process_status_tool(),
             network_status_tool(),
@@ -192,6 +204,15 @@ mod tests {
             assert!(tool.ai_autonomous);
             assert!(tool.permissions.iter().any(|p| p == "system.read"));
         }
+    }
+
+    #[test]
+    fn unified_intelligence_requires_read_permissions() {
+        let tool = unified_system_intelligence_tool();
+        assert_eq!(tool.risk, RiskLevel::ReadOnly);
+        assert!(tool.ai_autonomous);
+        assert!(tool.permissions.iter().any(|p| p == "system.read"));
+        assert!(tool.permissions.iter().any(|p| p == "filesystem.read"));
     }
 
     #[test]
