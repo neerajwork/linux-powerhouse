@@ -5,7 +5,10 @@
 //! it never performs cleanup itself.
 
 use serde::{Deserialize, Serialize};
-use std::{fs, io, path::{Path, PathBuf}};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 use thiserror::Error;
 
 const DEFAULT_MAX_DEPTH: usize = 4;
@@ -91,7 +94,9 @@ pub fn analyze_with_limits(
         consumers: Vec::new(),
     };
     let total_bytes = scan_directory(root, 0, &mut state)?;
-    state.consumers.sort_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.path.cmp(&b.path)));
+    state
+        .consumers
+        .sort_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.path.cmp(&b.path)));
     state.consumers.truncate(state.limits.top_n);
 
     Ok(StorageAnalysis {
@@ -165,10 +170,13 @@ fn scan_directory(
                 })
             }
         } else if file_type.is_file() {
-            entry.metadata().map(|metadata| metadata.len()).unwrap_or_else(|_| {
-                state.skipped_entries += 1;
-                0
-            })
+            entry
+                .metadata()
+                .map(|metadata| metadata.len())
+                .unwrap_or_else(|_| {
+                    state.skipped_entries += 1;
+                    0
+                })
         } else {
             0
         };
@@ -191,11 +199,14 @@ mod tests {
 
     #[test]
     fn bounded_analysis_reports_existing_directory() {
-        let result = analyze_with_limits("/tmp", ScanLimits {
-            max_depth: 1,
-            max_entries: 100,
-            top_n: 5,
-        });
+        let result = analyze_with_limits(
+            "/tmp",
+            ScanLimits {
+                max_depth: 1,
+                max_entries: 100,
+                top_n: 5,
+            },
+        );
         let result = result.expect("/tmp should be readable on Linux CI");
         assert_eq!(result.root, PathBuf::from("/tmp"));
         assert!(result.entries_scanned <= 100);
@@ -205,7 +216,10 @@ mod tests {
     #[test]
     fn missing_path_is_reported() {
         let result = analyze("/definitely/not/a/linux-powerhouse-path");
-        assert!(matches!(result, Err(StorageIntelligenceError::MissingPath(_))));
+        assert!(matches!(
+            result,
+            Err(StorageIntelligenceError::MissingPath(_))
+        ));
     }
 
     #[test]
@@ -216,7 +230,10 @@ mod tests {
         #[cfg(unix)]
         std::os::unix::fs::symlink(&target, &path).expect("create symlink");
         #[cfg(unix)]
-        assert!(matches!(analyze(&path), Err(StorageIntelligenceError::NotDirectory(_))));
+        assert!(matches!(
+            analyze(&path),
+            Err(StorageIntelligenceError::NotDirectory(_))
+        ));
         let _ = fs::remove_file(path);
     }
 }
