@@ -128,6 +128,20 @@ pub fn network_status_tool() -> ToolDefinition {
     )
 }
 
+pub fn network_intelligence_tool() -> ToolDefinition {
+    let mut tool = ToolDefinition::new(
+        "network.analyze",
+        "0.1.0",
+        "Network Intelligence",
+        "Analyze bounded TCP socket state, listening ports, established connections, and deterministic network signals.",
+        "network",
+        RiskLevel::Low,
+    );
+    tool.permissions.push("network.read".into());
+    tool.ai_autonomous = false;
+    tool
+}
+
 pub fn monitoring_status_tool() -> ToolDefinition {
     read_only_tool(
         "monitoring.status",
@@ -177,5 +191,10 @@ mod tests {
         assert_eq!(process.risk, RiskLevel::Low);
         assert!(!process.ai_autonomous);
         assert!(process.permissions.iter().any(|p| p == "system.read"));
+
+        let network = network_intelligence_tool();
+        assert_eq!(network.risk, RiskLevel::Low);
+        assert!(!network.ai_autonomous);
+        assert!(network.permissions.iter().any(|p| p == "network.read"));
     }
 }
