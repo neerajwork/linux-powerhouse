@@ -80,10 +80,11 @@ pub fn analyze_with_limits(
     let mut truncated = false;
 
     for (path, protocol) in [(TCP, SocketProtocol::Tcp), (TCP6, SocketProtocol::Tcp6)] {
-        let content = fs::read_to_string(path).map_err(|source| NetworkIntelligenceError::Read {
-            path: path.into(),
-            source,
-        })?;
+        let content =
+            fs::read_to_string(path).map_err(|source| NetworkIntelligenceError::Read {
+                path: path.into(),
+                source,
+            })?;
         for line in content.lines().skip(1) {
             if observations.len() >= limits.max_sockets {
                 truncated = true;
