@@ -4,6 +4,7 @@
 //! intelligence modules. It does not mutate the host system.
 
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -36,8 +37,13 @@ pub struct SystemIntelligenceSnapshot {
 }
 
 /// Build one bounded, deterministic snapshot from the existing intelligence layers.
-pub fn snapshot() -> Result<SystemIntelligenceSnapshot, UnifiedSystemIntelligenceError> {
-    let storage = storage_intelligence::analyze()
+///
+/// The storage root is supplied explicitly because storage analysis is intentionally
+/// scoped to a caller-approved path.
+pub fn snapshot(
+    storage_root: impl AsRef<Path>,
+) -> Result<SystemIntelligenceSnapshot, UnifiedSystemIntelligenceError> {
+    let storage = storage_intelligence::analyze(storage_root)
         .map_err(|error| UnifiedSystemIntelligenceError::Storage(error.to_string()))?;
     let process = process_intelligence::analyze()
         .map_err(|error| UnifiedSystemIntelligenceError::Process(error.to_string()))?;
@@ -46,7 +52,7 @@ pub fn snapshot() -> Result<SystemIntelligenceSnapshot, UnifiedSystemIntelligenc
     let service = service_intelligence::analyze()
         .map_err(|error| UnifiedSystemIntelligenceError::Service(error.to_string()))?;
 
-    let storage_anomalies = storage.anomalies.len();
+    let storage_anomalies = usize::from(storage.truncated) + usize::from(storage.skipped_entries > 0);
     let process_anomalies = process.anomalies.len();
     let network_anomalies = network.anomalies.len();
     let service_anomalies = service.anomalies.len();
