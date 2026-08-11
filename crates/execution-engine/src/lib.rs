@@ -6,6 +6,7 @@
 
 use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
+use network_intelligence::NetworkAnalysis;
 use policy_engine::{Decision, PolicyContext, evaluate};
 use powerhouse_core::{ExecutionId, OperationStatus};
 use process_intelligence::ProcessAnalysis;
@@ -13,9 +14,9 @@ use storage_intelligence::{ScanLimits, StorageAnalysis};
 use system_status::SystemStatus;
 use thiserror::Error;
 use tool_registry::{
-    ToolDefinition, health_status_tool, monitoring_status_tool, network_status_tool,
-    process_intelligence_tool, process_status_tool, storage_intelligence_tool, storage_status_tool,
-    system_status_tool,
+    ToolDefinition, health_status_tool, monitoring_status_tool, network_intelligence_tool,
+    network_status_tool, process_intelligence_tool, process_status_tool,
+    storage_intelligence_tool, storage_status_tool, system_status_tool,
 };
 
 #[derive(Debug, Error)]
@@ -36,6 +37,8 @@ pub enum ExecutionError {
     ProcessIntelligence(#[from] process_intelligence::ProcessIntelligenceError),
     #[error("network status backend failed: {0}")]
     NetworkStatus(#[from] network_status::NetworkStatusError),
+    #[error("network intelligence backend failed: {0}")]
+    NetworkIntelligence(#[from] network_intelligence::NetworkIntelligenceError),
     #[error("monitoring backend failed: {0}")]
     Monitoring(#[from] monitoring::MonitoringError),
     #[error("health evaluation failed: {0}")]
@@ -111,6 +114,13 @@ pub fn execute_network_status(
 ) -> Result<Vec<network_status::NetworkInterface>, ExecutionError> {
     authorize(&network_status_tool(), context)?;
     Ok(network_status::collect()?)
+}
+
+pub fn execute_network_analysis(
+    context: &PolicyContext,
+) -> Result<NetworkAnalysis, ExecutionError> {
+    authorize(&network_intelligence_tool(), context)?;
+    Ok(network_intelligence::analyze()?)
 }
 
 pub fn execute_monitoring_snapshot(
@@ -198,6 +208,15 @@ mod tests {
         assert!(matches!(denied, Err(ExecutionError::ConfirmationRequired)));
 
         let result = execute_process_analysis(&confirmed_context());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn network_analysis_requires_user_confirmation() {
+        let denied = execute_network_analysis(&ai_context());
+        assert!(matches!(denied, Err(ExecutionError::ConfirmationRequired)));
+
+        let result = execute_network_analysis(&confirmed_context());
         assert!(result.is_ok());
     }
 }
