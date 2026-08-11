@@ -14,6 +14,7 @@ storage-intelligence = { path = "../storage-intelligence" }
 process-status = { path = "../process-status" }
 process-intelligence = { path = "../process-intelligence" }
 network-status = { path = "../network-status" }
+network-intelligence = { path = "../network-intelligence" }
 monitoring = { path = "../monitoring" }
 health-status = { path = "../health-status" }
 tool-registry = { path = "../tool-registry" }
