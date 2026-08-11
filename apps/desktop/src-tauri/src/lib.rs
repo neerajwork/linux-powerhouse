@@ -42,12 +42,8 @@ fn storage_status() -> Result<Vec<storage_status::FilesystemStatus>, String> {
 
 #[tauri::command]
 fn storage_analyze(path: String) -> Result<StorageAnalysis, String> {
-    execute_storage_analysis(
-        &user_confirmed_context(),
-        path,
-        ScanLimits::default(),
-    )
-    .map_err(|error| error.to_string())
+    execute_storage_analysis(&user_confirmed_context(), path, ScanLimits::default())
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
