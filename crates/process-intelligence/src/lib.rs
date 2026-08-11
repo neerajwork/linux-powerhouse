@@ -5,7 +5,11 @@
 //! anomaly signals. It never terminates, pauses, or mutates processes.
 
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, io, path::{Path, PathBuf}};
+use std::{
+    collections::HashMap,
+    fs, io,
+    path::{Path, PathBuf},
+};
 use thiserror::Error;
 
 const PROC: &str = "/proc";
