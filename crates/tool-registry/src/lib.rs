@@ -82,6 +82,20 @@ pub fn storage_status_tool() -> ToolDefinition {
     )
 }
 
+pub fn storage_intelligence_tool() -> ToolDefinition {
+    let mut tool = ToolDefinition::new(
+        "storage.analyze",
+        "0.1.0",
+        "Storage Intelligence",
+        "Analyze a user-selected directory with bounded, read-only traversal to identify major space consumers.",
+        "storage",
+        RiskLevel::Low,
+    );
+    tool.permissions.push("filesystem.read".into());
+    tool.ai_autonomous = false;
+    tool
+}
+
 pub fn process_status_tool() -> ToolDefinition {
     read_only_tool(
         "process.status",
@@ -136,5 +150,13 @@ mod tests {
             assert!(tool.ai_autonomous);
             assert!(tool.permissions.iter().any(|p| p == "system.read"));
         }
+    }
+
+    #[test]
+    fn storage_analysis_requires_explicit_user_authorization() {
+        let tool = storage_intelligence_tool();
+        assert_eq!(tool.risk, RiskLevel::Low);
+        assert!(!tool.ai_autonomous);
+        assert!(tool.permissions.iter().any(|p| p == "filesystem.read"));
     }
 }
