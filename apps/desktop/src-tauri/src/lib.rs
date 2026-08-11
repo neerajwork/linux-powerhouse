@@ -2,11 +2,13 @@ use std::sync::Mutex;
 
 use execution_engine::{
     execute_health_status, execute_monitoring_snapshot, execute_network_status,
-    execute_process_status, execute_storage_status, execute_system_status,
+    execute_process_status, execute_storage_analysis, execute_storage_status,
+    execute_system_status,
 };
 use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::PolicyContext;
+use storage_intelligence::{ScanLimits, StorageAnalysis};
 
 struct AppState {
     monitor: Mutex<Monitor>,
@@ -16,6 +18,13 @@ fn context() -> PolicyContext {
     PolicyContext {
         ai_requested: false,
         user_confirmed: false,
+    }
+}
+
+fn user_confirmed_context() -> PolicyContext {
+    PolicyContext {
+        ai_requested: false,
+        user_confirmed: true,
     }
 }
 
@@ -29,6 +38,12 @@ fn system_status() -> Result<system_status::SystemStatus, String> {
 #[tauri::command]
 fn storage_status() -> Result<Vec<storage_status::FilesystemStatus>, String> {
     execute_storage_status(&context()).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn storage_analyze(path: String) -> Result<StorageAnalysis, String> {
+    execute_storage_analysis(&user_confirmed_context(), path, ScanLimits::default())
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -82,6 +97,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             system_status,
             storage_status,
+            storage_analyze,
             process_status,
             network_status,
             monitor_snapshot,

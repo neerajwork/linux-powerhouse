@@ -20,6 +20,7 @@ execution-engine = { path = "../../../crates/execution-engine" }
 policy-engine = { path = "../../../crates/policy-engine" }
 system-status = { path = "../../../crates/system-status" }
 storage-status = { path = "../../../crates/storage-status" }
+storage-intelligence = { path = "../../../crates/storage-intelligence" }
 process-status = { path = "../../../crates/process-status" }
 network-status = { path = "../../../crates/network-status" }
 monitoring = { path = "../../../crates/monitoring" }
