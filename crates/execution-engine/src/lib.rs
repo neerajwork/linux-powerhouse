@@ -18,7 +18,9 @@ use tool_registry::{
     ToolDefinition, health_status_tool, monitoring_status_tool, network_intelligence_tool,
     network_status_tool, process_intelligence_tool, process_status_tool, service_intelligence_tool,
     storage_intelligence_tool, storage_status_tool, system_status_tool,
+    unified_system_intelligence_tool,
 };
+use unified_system_intelligence::SystemIntelligenceSnapshot;
 
 #[derive(Debug, Error)]
 pub enum ExecutionError {
@@ -42,6 +44,8 @@ pub enum ExecutionError {
     NetworkIntelligence(#[from] network_intelligence::NetworkIntelligenceError),
     #[error("service intelligence backend failed: {0}")]
     ServiceIntelligence(#[from] service_intelligence::ServiceIntelligenceError),
+    #[error("unified system intelligence backend failed: {0}")]
+    UnifiedSystemIntelligence(#[from] unified_system_intelligence::UnifiedSystemIntelligenceError),
     #[error("monitoring backend failed: {0}")]
     Monitoring(#[from] monitoring::MonitoringError),
     #[error("health evaluation failed: {0}")]
@@ -80,6 +84,14 @@ pub fn execute_system_status(
     let execution = authorize(&system_status_tool(), context)?;
     let status = system_status::collect()?;
     Ok(SystemStatusExecution { execution, status })
+}
+
+pub fn execute_unified_system_intelligence(
+    context: &PolicyContext,
+    storage_root: impl AsRef<std::path::Path>,
+) -> Result<SystemIntelligenceSnapshot, ExecutionError> {
+    authorize(&unified_system_intelligence_tool(), context)?;
+    Ok(unified_system_intelligence::snapshot(storage_root)?)
 }
 
 pub fn execute_storage_status(
@@ -185,6 +197,12 @@ mod tests {
         assert!(execute_monitoring_snapshot(&context, &mut monitor).is_ok());
         let snapshot = monitor.snapshot().unwrap();
         assert!(execute_health_status(&context, Some(&snapshot), Some(50)).is_ok());
+    }
+
+    #[test]
+    fn unified_intelligence_executes_for_ai() {
+        let result = execute_unified_system_intelligence(&ai_context(), "/tmp");
+        assert!(result.is_ok());
     }
 
     #[test]

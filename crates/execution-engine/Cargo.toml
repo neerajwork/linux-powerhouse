@@ -16,6 +16,7 @@ process-intelligence = { path = "../process-intelligence" }
 network-status = { path = "../network-status" }
 network-intelligence = { path = "../network-intelligence" }
 service-intelligence = { path = "../service-intelligence" }
+unified-system-intelligence = { path = "../unified-system-intelligence" }
 monitoring = { path = "../monitoring" }
 health-status = { path = "../health-status" }
 tool-registry = { path = "../tool-registry" }

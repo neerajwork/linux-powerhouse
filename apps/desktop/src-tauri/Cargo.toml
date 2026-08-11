@@ -26,6 +26,7 @@ process-intelligence = { path = "../../../crates/process-intelligence" }
 network-status = { path = "../../../crates/network-status" }
 network-intelligence = { path = "../../../crates/network-intelligence" }
 service-intelligence = { path = "../../../crates/service-intelligence" }
+unified-system-intelligence = { path = "../../../crates/unified-system-intelligence" }
 monitoring = { path = "../../../crates/monitoring" }
 health-status = { path = "../../../crates/health-status" }
 serde.workspace = true
