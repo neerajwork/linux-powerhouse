@@ -1,11 +1,7 @@
 //! Lightweight read-only Linux monitoring with bounded in-memory history.
 
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::VecDeque,
-    fs,
-    time::Instant,
-};
+use std::{collections::VecDeque, fs, time::Instant};
 use thiserror::Error;
 
 const PROC_STAT: &str = "/proc/stat";
