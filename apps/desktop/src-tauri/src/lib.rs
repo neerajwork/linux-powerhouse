@@ -4,7 +4,7 @@ use execution_engine::{
     execute_health_status, execute_monitoring_snapshot, execute_network_analysis,
     execute_network_status, execute_process_analysis, execute_process_status,
     execute_service_analysis, execute_storage_analysis, execute_storage_status,
-    execute_system_status,
+    execute_system_status, execute_unified_system_intelligence,
 };
 use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
@@ -13,6 +13,7 @@ use policy_engine::PolicyContext;
 use process_intelligence::ProcessAnalysis;
 use service_intelligence::ServiceAnalysis;
 use storage_intelligence::{ScanLimits, StorageAnalysis};
+use unified_system_intelligence::SystemIntelligenceSnapshot;
 
 struct AppState {
     monitor: Mutex<Monitor>,
@@ -36,6 +37,12 @@ fn user_confirmed_context() -> PolicyContext {
 fn system_status() -> Result<system_status::SystemStatus, String> {
     execute_system_status(&context())
         .map(|result| result.status)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn system_intelligence(storage_root: String) -> Result<SystemIntelligenceSnapshot, String> {
+    execute_unified_system_intelligence(&context(), storage_root)
         .map_err(|error| error.to_string())
 }
 
@@ -115,6 +122,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             system_status,
+            system_intelligence,
             storage_status,
             storage_analyze,
             process_status,
