@@ -5,11 +5,7 @@
 //! anomaly signals. It never terminates, pauses, or mutates processes.
 
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fs, io,
-    path::Path,
-};
+use std::{collections::HashMap, fs, io, path::Path};
 use thiserror::Error;
 
 const PROC: &str = "/proc";
@@ -261,7 +257,8 @@ mod tests {
 
     #[test]
     fn invalid_stat_is_rejected() {
-        let path = std::path::PathBuf::from("/tmp/linux-powerhouse-process-intelligence-no-such-pid");
+        let path =
+            std::path::PathBuf::from("/tmp/linux-powerhouse-process-intelligence-no-such-pid");
         let result = read_process(&path, 1);
         assert!(result.is_err());
     }
