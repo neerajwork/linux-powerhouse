@@ -10,6 +10,7 @@ members = [
     "crates/process-status",
     "crates/network-status",
     "crates/monitoring",
+    "crates/health-status",
     "apps/desktop/src-tauri",
 ]
 

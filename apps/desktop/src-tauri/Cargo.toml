@@ -23,6 +23,7 @@ storage-status = { path = "../../../crates/storage-status" }
 process-status = { path = "../../../crates/process-status" }
 network-status = { path = "../../../crates/network-status" }
 monitoring = { path = "../../../crates/monitoring" }
+health-status = { path = "../../../crates/health-status" }
 serde.workspace = true
 serde_json.workspace = true
 

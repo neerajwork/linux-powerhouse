@@ -13,6 +13,7 @@ storage-status = { path = "../storage-status" }
 process-status = { path = "../process-status" }
 network-status = { path = "../network-status" }
 monitoring = { path = "../monitoring" }
+health-status = { path = "../health-status" }
 tool-registry = { path = "../tool-registry" }
 serde.workspace = true
 thiserror.workspace = true

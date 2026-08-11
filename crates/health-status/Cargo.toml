@@ -1,0 +1,11 @@
+[package]
+name = "health-status"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+monitoring = { path = "../monitoring" }
+serde.workspace = true
+thiserror.workspace = true
