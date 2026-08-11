@@ -52,7 +52,8 @@ pub fn snapshot(
     let service = service_intelligence::analyze()
         .map_err(|error| UnifiedSystemIntelligenceError::Service(error.to_string()))?;
 
-    let storage_anomalies = usize::from(storage.truncated) + usize::from(storage.skipped_entries > 0);
+    let storage_anomalies =
+        usize::from(storage.truncated) + usize::from(storage.skipped_entries > 0);
     let process_anomalies = process.anomalies.len();
     let network_anomalies = network.anomalies.len();
     let service_anomalies = service.anomalies.len();
