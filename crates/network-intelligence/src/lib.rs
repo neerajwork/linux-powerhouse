@@ -167,7 +167,7 @@ fn parse_endpoint(value: &str, protocol: SocketProtocol) -> Option<(String, u16)
             if address.len() != 8 {
                 return None;
             }
-            let bytes = u32::from_str_radix(address, 16)?.to_le_bytes();
+            let bytes = u32::from_str_radix(address, 16).ok()?.to_le_bytes();
             Some((Ipv4Addr::from(bytes).to_string(), port))
         }
         SocketProtocol::Tcp6 => Some((format_ipv6(address)?, port)),
