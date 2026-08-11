@@ -72,7 +72,6 @@ pub fn system_status_tool() -> ToolDefinition {
         "system",
     )
 }
-
 pub fn storage_status_tool() -> ToolDefinition {
     read_only_tool(
         "storage.status",
@@ -81,7 +80,6 @@ pub fn storage_status_tool() -> ToolDefinition {
         "storage",
     )
 }
-
 pub fn process_status_tool() -> ToolDefinition {
     read_only_tool(
         "process.status",
@@ -90,13 +88,20 @@ pub fn process_status_tool() -> ToolDefinition {
         "processes",
     )
 }
-
 pub fn network_status_tool() -> ToolDefinition {
     read_only_tool(
         "network.status",
         "Network Status",
         "Read network interface state and traffic counters.",
         "network",
+    )
+}
+pub fn monitoring_status_tool() -> ToolDefinition {
+    read_only_tool(
+        "monitoring.status",
+        "Realtime Monitoring",
+        "Read live CPU, memory, swap and network throughput metrics.",
+        "monitoring",
     )
 }
 
@@ -111,6 +116,7 @@ mod tests {
             storage_status_tool(),
             process_status_tool(),
             network_status_tool(),
+            monitoring_status_tool(),
         ] {
             assert_eq!(tool.risk, RiskLevel::ReadOnly);
             assert!(tool.ai_autonomous);

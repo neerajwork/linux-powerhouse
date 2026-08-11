@@ -4,13 +4,14 @@
 //! before a backend is invoked. Linux Powerhouse never gives the AI a raw
 //! shell as an execution primitive.
 
+use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::{Decision, PolicyContext, evaluate};
 use powerhouse_core::{ExecutionId, OperationStatus};
 use system_status::SystemStatus;
 use thiserror::Error;
 use tool_registry::{
-    ToolDefinition, network_status_tool, process_status_tool, storage_status_tool,
-    system_status_tool,
+    ToolDefinition, monitoring_status_tool, network_status_tool, process_status_tool,
+    storage_status_tool, system_status_tool,
 };
 
 #[derive(Debug, Error)]
@@ -27,6 +28,8 @@ pub enum ExecutionError {
     ProcessStatus(#[from] process_status::ProcessStatusError),
     #[error("network status backend failed: {0}")]
     NetworkStatus(#[from] network_status::NetworkStatusError),
+    #[error("monitoring backend failed: {0}")]
+    Monitoring(#[from] monitoring::MonitoringError),
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +87,14 @@ pub fn execute_network_status(
     Ok(network_status::collect()?)
 }
 
+pub fn execute_monitoring_snapshot(
+    context: &PolicyContext,
+    monitor: &mut Monitor,
+) -> Result<MonitorSnapshot, ExecutionError> {
+    authorize(&monitoring_status_tool(), context)?;
+    Ok(monitor.snapshot()?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,5 +119,7 @@ mod tests {
         assert!(!execute_storage_status(&context).unwrap().is_empty());
         assert!(!execute_process_status(&context).unwrap().is_empty());
         assert!(!execute_network_status(&context).unwrap().is_empty());
+        let mut monitor = Monitor::new();
+        assert!(execute_monitoring_snapshot(&context, &mut monitor).is_ok());
     }
 }

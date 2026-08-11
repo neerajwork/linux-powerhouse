@@ -1,7 +1,15 @@
+use std::sync::Mutex;
+
 use execution_engine::{
-    execute_network_status, execute_process_status, execute_storage_status, execute_system_status,
+    execute_monitoring_snapshot, execute_network_status, execute_process_status,
+    execute_storage_status, execute_system_status,
 };
+use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::PolicyContext;
+
+struct AppState {
+    monitor: Mutex<Monitor>,
+}
 
 fn context() -> PolicyContext {
     PolicyContext {
@@ -32,14 +40,37 @@ fn network_status() -> Result<Vec<network_status::NetworkInterface>, String> {
     execute_network_status(&context()).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn monitor_snapshot(state: tauri::State<'_, AppState>) -> Result<MonitorSnapshot, String> {
+    let mut monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
+    execute_monitoring_snapshot(&context(), &mut monitor).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn monitor_history(state: tauri::State<'_, AppState>) -> Result<Vec<MonitorSnapshot>, String> {
+    let monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
+    Ok(monitor.history())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(AppState {
+            monitor: Mutex::new(Monitor::new()),
+        })
         .invoke_handler(tauri::generate_handler![
             system_status,
             storage_status,
             process_status,
-            network_status
+            network_status,
+            monitor_snapshot,
+            monitor_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running Linux Powerhouse");
