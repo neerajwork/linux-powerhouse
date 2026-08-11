@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { SystemHealth } from "./components/SystemHealth";
 
 type OperatingSystem = { id: string | null; name: string | null; version: string | null };
 type SystemStatus = { operating_system: OperatingSystem; kernel_version: string; architecture: string; hostname: string; cpu_model: string | null; cpu_logical_cores: number; memory_total_bytes: number; memory_available_bytes: number; swap_total_bytes: number; swap_free_bytes: number; uptime_seconds: number };
@@ -7,7 +8,7 @@ type FilesystemStatus = { mount_point: string; total_bytes: number; available_by
 type ProcessInfo = { pid: number; name: string; state: string; memory_bytes: number };
 type NetworkInterface = { name: string; is_up: boolean; rx_bytes: number; tx_bytes: number };
 type MonitorSnapshot = { timestamp_ms: number; cpu_percent: number; memory_percent: number; swap_percent: number; network: { name: string; rx_bytes_per_second: number; tx_bytes_per_second: number }[] };
-type Section = "Dashboard" | "Monitoring" | "Storage" | "Processes" | "Network";
+type Section = "Dashboard" | "System Health" | "Monitoring" | "Storage" | "Processes" | "Network";
 
 const formatBytes = (bytes: number) => {
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -73,7 +74,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark">LP</div><div><strong>Linux Powerhouse</strong><span>Powerful Linux. Simplified.</span></div></div>
         <nav>
-          {(["Dashboard", "Monitoring", "Storage", "Processes", "Network"] as Section[]).map((item) => (
+          {(["Dashboard", "System Health", "Monitoring", "Storage", "Processes", "Network"] as Section[]).map((item) => (
             <button key={item} className={`nav-item ${section === item ? "active" : ""}`} onClick={() => setSection(item)}>{item}</button>
           ))}
           <button className="nav-item" disabled>Services</button><button className="nav-item" disabled>Security</button><button className="nav-item" disabled>AI Assistant</button>
@@ -86,6 +87,7 @@ export default function App() {
         </header>
         {error && <div className="error">Unable to read system data: {error}</div>}
 
+        {section === "System Health" && <SystemHealth />}
         {section === "Monitoring" && <section className="monitoring">
           <div className="monitor-grid">
             <article className="monitor-card"><div className="monitor-heading"><span className="label">CPU</span><strong>{latest ? `${latest.cpu_percent.toFixed(1)}%` : "—"}</strong></div><Sparkline values={history.map((item) => item.cpu_percent)} /><span className="muted">Average {averageCpu.toFixed(1)}% · Peak {peakCpu.toFixed(1)}%</span></article>

@@ -37,4 +37,16 @@ h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margi
 .muted, .monitor-note { color: #94a3b8; font-size: 12px; }
 .rate-row { display: flex; justify-content: space-between; gap: 20px; padding: 12px 0; border-top: 1px solid #263244; }
 .rate-row span { color: #94a3b8; font-size: 12px; }
-@media (max-width: 1050px) { .sidebar { width: 210px; } .content { padding: 32px; } .monitor-grid { grid-template-columns: 1fr; } }
+.system-health { display: grid; gap: 20px; }
+.system-health__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.system-health__header h2 { margin: 7px 0; font-size: 26px; }
+.system-health__summary { display: flex; align-items: center; gap: 14px; padding: 18px 20px; background: #111827; border: 1px solid #263244; border-radius: 14px; color: #94a3b8; }
+.system-health__status { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+.system-health__status--healthy { color: #bbf7d0; background: #14532d; }
+.system-health__status--attention { color: #fef3c7; background: #713f12; }
+.system-health__status--degraded { color: #fecaca; background: #7f1d1d; }
+.system-health__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.system-health__signal { min-height: 130px; }
+.system-health__signal strong { font-size: 28px; }
+.system-health__loading { color: #94a3b8; }
+@media (max-width: 1050px) { .sidebar { width: 210px; } .content { padding: 32px; } .monitor-grid, .system-health__grid { grid-template-columns: 1fr; } }
