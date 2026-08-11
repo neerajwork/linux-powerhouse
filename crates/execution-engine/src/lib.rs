@@ -16,9 +16,9 @@ use system_status::SystemStatus;
 use thiserror::Error;
 use tool_registry::{
     ToolDefinition, health_status_tool, monitoring_status_tool, network_intelligence_tool,
-    network_status_tool, process_intelligence_tool, process_status_tool,
-    service_intelligence_tool, storage_intelligence_tool, storage_status_tool,
-    system_status_tool, unified_system_intelligence_tool,
+    network_status_tool, process_intelligence_tool, process_status_tool, service_intelligence_tool,
+    storage_intelligence_tool, storage_status_tool, system_status_tool,
+    unified_system_intelligence_tool,
 };
 use unified_system_intelligence::SystemIntelligenceSnapshot;
 
