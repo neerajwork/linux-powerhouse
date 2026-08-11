@@ -42,8 +42,7 @@ fn system_status() -> Result<system_status::SystemStatus, String> {
 
 #[tauri::command]
 fn system_intelligence(storage_root: String) -> Result<SystemIntelligenceSnapshot, String> {
-    execute_unified_system_intelligence(&context(), storage_root)
-        .map_err(|error| error.to_string())
+    execute_unified_system_intelligence(&context(), storage_root.map_err(|error| error.to_string()))
 }
 
 #[tauri::command]
