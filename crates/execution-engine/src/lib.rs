@@ -8,11 +8,12 @@ use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::{Decision, PolicyContext, evaluate};
 use powerhouse_core::{ExecutionId, OperationStatus};
+use storage_intelligence::{ScanLimits, StorageAnalysis};
 use system_status::SystemStatus;
 use thiserror::Error;
 use tool_registry::{
     ToolDefinition, health_status_tool, monitoring_status_tool, network_status_tool,
-    process_status_tool, storage_status_tool, system_status_tool,
+    process_status_tool, storage_intelligence_tool, storage_status_tool, system_status_tool,
 };
 
 #[derive(Debug, Error)]
@@ -25,6 +26,8 @@ pub enum ExecutionError {
     SystemStatus(#[from] system_status::SystemStatusError),
     #[error("storage status backend failed: {0}")]
     StorageStatus(#[from] storage_status::StorageStatusError),
+    #[error("storage intelligence backend failed: {0}")]
+    StorageIntelligence(#[from] storage_intelligence::StorageIntelligenceError),
     #[error("process status backend failed: {0}")]
     ProcessStatus(#[from] process_status::ProcessStatusError),
     #[error("network status backend failed: {0}")]
@@ -76,6 +79,15 @@ pub fn execute_storage_status(
     Ok(storage_status::collect()?)
 }
 
+pub fn execute_storage_analysis(
+    context: &PolicyContext,
+    path: impl AsRef<std::path::Path>,
+    limits: ScanLimits,
+) -> Result<StorageAnalysis, ExecutionError> {
+    authorize(&storage_intelligence_tool(), context)?;
+    Ok(storage_intelligence::analyze_with_limits(path, limits)?)
+}
+
 pub fn execute_process_status(
     context: &PolicyContext,
 ) -> Result<Vec<process_status::ProcessInfo>, ExecutionError> {
@@ -118,6 +130,13 @@ mod tests {
         }
     }
 
+    fn confirmed_context() -> PolicyContext {
+        PolicyContext {
+            ai_requested: true,
+            user_confirmed: true,
+        }
+    }
+
     #[test]
     fn read_only_dashboard_capabilities_execute_for_ai() {
         let context = ai_context();
@@ -135,5 +154,30 @@ mod tests {
         assert!(execute_monitoring_snapshot(&context, &mut monitor).is_ok());
         let snapshot = monitor.snapshot().unwrap();
         assert!(execute_health_status(&context, Some(&snapshot), Some(50)).is_ok());
+    }
+
+    #[test]
+    fn storage_analysis_requires_user_confirmation() {
+        let denied = execute_storage_analysis(
+            &ai_context(),
+            "/tmp",
+            ScanLimits {
+                max_depth: 1,
+                max_entries: 10,
+                top_n: 5,
+            },
+        );
+        assert!(matches!(denied, Err(ExecutionError::ConfirmationRequired)));
+
+        let result = execute_storage_analysis(
+            &confirmed_context(),
+            "/tmp",
+            ScanLimits {
+                max_depth: 1,
+                max_entries: 10,
+                top_n: 5,
+            },
+        );
+        assert!(result.is_ok());
     }
 }
