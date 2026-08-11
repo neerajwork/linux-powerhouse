@@ -28,7 +28,7 @@ export function SystemHealth() {
     setError(null);
     try {
       const result = await invoke<SystemIntelligenceSnapshot>("system_intelligence", {
-        storageRoot: "/tmp",
+        storageRoot: "/",
       });
       setSnapshot(result);
     } catch (err) {
