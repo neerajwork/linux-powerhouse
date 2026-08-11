@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 type HealthLevel = "Healthy" | "Attention" | "Degraded";
+type Subsystem = "Storage" | "Processes" | "Network" | "Services";
 
 type SystemIntelligenceSnapshot = {
   health: HealthLevel;
@@ -16,6 +17,25 @@ const healthClass: Record<HealthLevel, string> = {
   Healthy: "system-health__status system-health__status--healthy",
   Attention: "system-health__status system-health__status--attention",
   Degraded: "system-health__status system-health__status--degraded",
+};
+
+const guidance: Record<Subsystem, { healthy: string; action: string }> = {
+  Storage: {
+    healthy: "No storage anomaly signals were reported.",
+    action: "Review filesystem usage and available space.",
+  },
+  Processes: {
+    healthy: "No process anomaly signals were reported.",
+    action: "Review the process list for unusual activity or resource use.",
+  },
+  Network: {
+    healthy: "No network anomaly signals were reported.",
+    action: "Review network interfaces and connectivity status.",
+  },
+  Services: {
+    healthy: "No service anomaly signals were reported.",
+    action: "Review service status for any unavailable or degraded service.",
+  },
 };
 
 export function SystemHealth() {
@@ -42,6 +62,15 @@ export function SystemHealth() {
     void refresh();
   }, [refresh]);
 
+  const signals: Array<[Subsystem, number]> = snapshot
+    ? [
+        ["Storage", snapshot.storage_anomalies],
+        ["Processes", snapshot.process_anomalies],
+        ["Network", snapshot.network_anomalies],
+        ["Services", snapshot.service_anomalies],
+      ]
+    : [];
+
   return (
     <section className="system-health" aria-labelledby="system-health-title">
       <div className="system-health__header">
@@ -63,26 +92,41 @@ export function SystemHealth() {
         <>
           <div className="system-health__summary">
             <span className={healthClass[snapshot.health]}>{snapshot.health}</span>
-            <span>{snapshot.total_anomalies} signal(s) requiring attention</span>
+            <span>
+              {snapshot.total_anomalies === 0
+                ? "No anomaly signals detected"
+                : `${snapshot.total_anomalies} signal(s) requiring attention`}
+            </span>
           </div>
           <div className="system-health__grid">
-            <Signal label="Storage" value={snapshot.storage_anomalies} />
-            <Signal label="Processes" value={snapshot.process_anomalies} />
-            <Signal label="Network" value={snapshot.network_anomalies} />
-            <Signal label="Services" value={snapshot.service_anomalies} />
+            {signals.map(([label, value]) => (
+              <article className="system-health__signal card" key={label}>
+                <span className="label">{label.toUpperCase()}</span>
+                <strong>{value}</strong>
+                <span>{value === 0 ? "No signals detected" : "Signal(s) detected"}</span>
+              </article>
+            ))}
+          </div>
+          <div className="system-health__guidance" aria-label="System health guidance">
+            <div>
+              <p className="label">WHAT TO DO NEXT</p>
+              <p className="system-health__guidance-summary">
+                {snapshot.total_anomalies === 0
+                  ? "The current snapshot is healthy. No action is suggested."
+                  : "Use the subsystem guidance below to decide what to inspect next. These suggestions do not change system state."}
+              </p>
+            </div>
+            <div className="system-health__guidance-grid">
+              {signals.map(([label, value]) => (
+                <div className="system-health__guidance-item" key={`${label}-guidance`}>
+                  <strong>{label}</strong>
+                  <span>{value === 0 ? guidance[label].healthy : guidance[label].action}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       ) : null}
     </section>
-  );
-}
-
-function Signal({ label, value }: { label: string; value: number }) {
-  return (
-    <article className="system-health__signal card">
-      <span className="label">{label.toUpperCase()}</span>
-      <strong>{value}</strong>
-      <span>{value === 0 ? "No signals detected" : "Signal(s) detected"}</span>
-    </article>
   );
 }

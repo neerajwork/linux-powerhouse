@@ -49,4 +49,11 @@ h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margi
 .system-health__signal { min-height: 130px; }
 .system-health__signal strong { font-size: 28px; }
 .system-health__loading { color: #94a3b8; }
-@media (max-width: 1050px) { .sidebar { width: 210px; } .content { padding: 32px; } .monitor-grid, .system-health__grid { grid-template-columns: 1fr; } }
+.system-health__guidance { padding: 22px; background: #111827; border: 1px solid #263244; border-radius: 14px; }
+.system-health__guidance-summary { margin: 8px 0 0; color: #94a3b8; line-height: 1.5; }
+.system-health__guidance-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.system-health__guidance-item { padding: 15px; border: 1px solid #263244; border-radius: 10px; }
+.system-health__guidance-item strong, .system-health__guidance-item span { display: block; }
+.system-health__guidance-item strong { font-size: 14px; }
+.system-health__guidance-item span { margin-top: 6px; color: #94a3b8; font-size: 12px; line-height: 1.45; }
+@media (max-width: 1050px) { .sidebar { width: 210px; } .content { padding: 32px; } .monitor-grid, .system-health__grid, .system-health__guidance-grid { grid-template-columns: 1fr; } }
