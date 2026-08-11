@@ -22,6 +22,7 @@ system-status = { path = "../../../crates/system-status" }
 storage-status = { path = "../../../crates/storage-status" }
 storage-intelligence = { path = "../../../crates/storage-intelligence" }
 process-status = { path = "../../../crates/process-status" }
+process-intelligence = { path = "../../../crates/process-intelligence" }
 network-status = { path = "../../../crates/network-status" }
 monitoring = { path = "../../../crates/monitoring" }
 health-status = { path = "../../../crates/health-status" }
