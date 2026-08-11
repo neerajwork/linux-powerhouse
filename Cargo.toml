@@ -12,6 +12,7 @@ members = [
     "crates/process-intelligence",
     "crates/network-status",
     "crates/network-intelligence",
+    "crates/service-intelligence",
     "crates/monitoring",
     "crates/health-status",
     "apps/desktop/src-tauri",

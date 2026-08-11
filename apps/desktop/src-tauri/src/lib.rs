@@ -3,13 +3,15 @@ use std::sync::Mutex;
 use execution_engine::{
     execute_health_status, execute_monitoring_snapshot, execute_network_analysis,
     execute_network_status, execute_process_analysis, execute_process_status,
-    execute_storage_analysis, execute_storage_status, execute_system_status,
+    execute_service_analysis, execute_storage_analysis, execute_storage_status,
+    execute_system_status,
 };
 use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
 use network_intelligence::NetworkAnalysis;
 use policy_engine::PolicyContext;
 use process_intelligence::ProcessAnalysis;
+use service_intelligence::ServiceAnalysis;
 use storage_intelligence::{ScanLimits, StorageAnalysis};
 
 struct AppState {
@@ -69,6 +71,11 @@ fn network_analyze() -> Result<NetworkAnalysis, String> {
 }
 
 #[tauri::command]
+fn service_analyze() -> Result<ServiceAnalysis, String> {
+    execute_service_analysis(&user_confirmed_context()).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn monitor_snapshot(state: tauri::State<'_, AppState>) -> Result<MonitorSnapshot, String> {
     let mut monitor = state
         .monitor
@@ -114,6 +121,7 @@ pub fn run() {
             process_analyze,
             network_status,
             network_analyze,
+            service_analyze,
             monitor_snapshot,
             monitor_history,
             health_status

@@ -142,6 +142,20 @@ pub fn network_intelligence_tool() -> ToolDefinition {
     tool
 }
 
+pub fn service_intelligence_tool() -> ToolDefinition {
+    let mut tool = ToolDefinition::new(
+        "service.analyze",
+        "0.1.0",
+        "Service Intelligence",
+        "Analyze bounded systemd service state and deterministic failure signals without mutating services.",
+        "services",
+        RiskLevel::Low,
+    );
+    tool.permissions.push("system.read".into());
+    tool.ai_autonomous = false;
+    tool
+}
+
 pub fn monitoring_status_tool() -> ToolDefinition {
     read_only_tool(
         "monitoring.status",
@@ -196,5 +210,10 @@ mod tests {
         assert_eq!(network.risk, RiskLevel::Low);
         assert!(!network.ai_autonomous);
         assert!(network.permissions.iter().any(|p| p == "network.read"));
+
+        let service = service_intelligence_tool();
+        assert_eq!(service.risk, RiskLevel::Low);
+        assert!(!service.ai_autonomous);
+        assert!(service.permissions.iter().any(|p| p == "system.read"));
     }
 }
