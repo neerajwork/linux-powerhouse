@@ -1,9 +1,10 @@
 use std::sync::Mutex;
 
 use execution_engine::{
-    execute_monitoring_snapshot, execute_network_status, execute_process_status,
-    execute_storage_status, execute_system_status,
+    execute_health_status, execute_monitoring_snapshot, execute_network_status,
+    execute_process_status, execute_storage_status, execute_system_status,
 };
+use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::PolicyContext;
 
@@ -58,6 +59,20 @@ fn monitor_history(state: tauri::State<'_, AppState>) -> Result<Vec<MonitorSnaps
     Ok(monitor.history())
 }
 
+#[tauri::command]
+fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, String> {
+    let mut monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
+    let snapshot = monitor.snapshot().map_err(|error| error.to_string())?;
+    let storage = execution_engine::execute_storage_status(&context())
+        .map_err(|error| error.to_string())?;
+    let max_storage_usage = storage.iter().map(|item| item.usage_percent).max();
+    execute_health_status(&context(), Some(&snapshot), max_storage_usage)
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -70,7 +85,8 @@ pub fn run() {
             process_status,
             network_status,
             monitor_snapshot,
-            monitor_history
+            monitor_history,
+            health_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running Linux Powerhouse");
