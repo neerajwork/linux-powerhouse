@@ -173,6 +173,9 @@ mod tests {
 
     #[test]
     fn missing_monitoring_snapshot_is_an_error() {
-        assert!(matches!(evaluate(None, None), Err(HealthStatusError::NoSnapshot)));
+        assert!(matches!(
+            evaluate(None, None),
+            Err(HealthStatusError::NoSnapshot)
+        ));
     }
 }
