@@ -12,6 +12,7 @@ system-status = { path = "../system-status" }
 storage-status = { path = "../storage-status" }
 storage-intelligence = { path = "../storage-intelligence" }
 process-status = { path = "../process-status" }
+process-intelligence = { path = "../process-intelligence" }
 network-status = { path = "../network-status" }
 monitoring = { path = "../monitoring" }
 health-status = { path = "../health-status" }
