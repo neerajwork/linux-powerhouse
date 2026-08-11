@@ -9,6 +9,7 @@ members = [
     "crates/storage-status",
     "crates/storage-intelligence",
     "crates/process-status",
+    "crates/process-intelligence",
     "crates/network-status",
     "crates/monitoring",
     "crates/health-status",

@@ -2,12 +2,13 @@ use std::sync::Mutex;
 
 use execution_engine::{
     execute_health_status, execute_monitoring_snapshot, execute_network_status,
-    execute_process_status, execute_storage_analysis, execute_storage_status,
-    execute_system_status,
+    execute_process_analysis, execute_process_status, execute_storage_analysis,
+    execute_storage_status, execute_system_status,
 };
 use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::PolicyContext;
+use process_intelligence::ProcessAnalysis;
 use storage_intelligence::{ScanLimits, StorageAnalysis};
 
 struct AppState {
@@ -49,6 +50,11 @@ fn storage_analyze(path: String) -> Result<StorageAnalysis, String> {
 #[tauri::command]
 fn process_status() -> Result<Vec<process_status::ProcessInfo>, String> {
     execute_process_status(&context()).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn process_analyze() -> Result<ProcessAnalysis, String> {
+    execute_process_analysis(&user_confirmed_context()).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -99,6 +105,7 @@ pub fn run() {
             storage_status,
             storage_analyze,
             process_status,
+            process_analyze,
             network_status,
             monitor_snapshot,
             monitor_history,

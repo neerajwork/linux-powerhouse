@@ -8,12 +8,14 @@ use health_status::HealthSnapshot;
 use monitoring::{Monitor, MonitorSnapshot};
 use policy_engine::{Decision, PolicyContext, evaluate};
 use powerhouse_core::{ExecutionId, OperationStatus};
+use process_intelligence::ProcessAnalysis;
 use storage_intelligence::{ScanLimits, StorageAnalysis};
 use system_status::SystemStatus;
 use thiserror::Error;
 use tool_registry::{
     ToolDefinition, health_status_tool, monitoring_status_tool, network_status_tool,
-    process_status_tool, storage_intelligence_tool, storage_status_tool, system_status_tool,
+    process_intelligence_tool, process_status_tool, storage_intelligence_tool, storage_status_tool,
+    system_status_tool,
 };
 
 #[derive(Debug, Error)]
@@ -30,6 +32,8 @@ pub enum ExecutionError {
     StorageIntelligence(#[from] storage_intelligence::StorageIntelligenceError),
     #[error("process status backend failed: {0}")]
     ProcessStatus(#[from] process_status::ProcessStatusError),
+    #[error("process intelligence backend failed: {0}")]
+    ProcessIntelligence(#[from] process_intelligence::ProcessIntelligenceError),
     #[error("network status backend failed: {0}")]
     NetworkStatus(#[from] network_status::NetworkStatusError),
     #[error("monitoring backend failed: {0}")]
@@ -93,6 +97,13 @@ pub fn execute_process_status(
 ) -> Result<Vec<process_status::ProcessInfo>, ExecutionError> {
     authorize(&process_status_tool(), context)?;
     Ok(process_status::collect(50)?)
+}
+
+pub fn execute_process_analysis(
+    context: &PolicyContext,
+) -> Result<ProcessAnalysis, ExecutionError> {
+    authorize(&process_intelligence_tool(), context)?;
+    Ok(process_intelligence::analyze()?)
 }
 
 pub fn execute_network_status(
@@ -178,6 +189,15 @@ mod tests {
                 top_n: 5,
             },
         );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn process_analysis_requires_user_confirmation() {
+        let denied = execute_process_analysis(&ai_context());
+        assert!(matches!(denied, Err(ExecutionError::ConfirmationRequired)));
+
+        let result = execute_process_analysis(&confirmed_context());
         assert!(result.is_ok());
     }
 }

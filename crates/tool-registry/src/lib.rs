@@ -105,6 +105,20 @@ pub fn process_status_tool() -> ToolDefinition {
     )
 }
 
+pub fn process_intelligence_tool() -> ToolDefinition {
+    let mut tool = ToolDefinition::new(
+        "process.analyze",
+        "0.1.0",
+        "Process Intelligence",
+        "Analyze a bounded process snapshot for resource concentration, process hierarchy, and deterministic anomalies.",
+        "processes",
+        RiskLevel::Low,
+    );
+    tool.permissions.push("system.read".into());
+    tool.ai_autonomous = false;
+    tool
+}
+
 pub fn network_status_tool() -> ToolDefinition {
     read_only_tool(
         "network.status",
@@ -153,10 +167,15 @@ mod tests {
     }
 
     #[test]
-    fn storage_analysis_requires_explicit_user_authorization() {
-        let tool = storage_intelligence_tool();
-        assert_eq!(tool.risk, RiskLevel::Low);
-        assert!(!tool.ai_autonomous);
-        assert!(tool.permissions.iter().any(|p| p == "filesystem.read"));
+    fn analysis_tools_require_explicit_user_authorization() {
+        let storage = storage_intelligence_tool();
+        assert_eq!(storage.risk, RiskLevel::Low);
+        assert!(!storage.ai_autonomous);
+        assert!(storage.permissions.iter().any(|p| p == "filesystem.read"));
+
+        let process = process_intelligence_tool();
+        assert_eq!(process.risk, RiskLevel::Low);
+        assert!(!process.ai_autonomous);
+        assert!(process.permissions.iter().any(|p| p == "system.read"));
     }
 }
