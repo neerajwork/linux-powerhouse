@@ -46,6 +46,8 @@ h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margi
 .system-health__trend { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .system-health__trend > div { min-height: 100px; }
 .system-health__trend strong { display: block; margin: 8px 0 5px; font-size: 24px; }
+.system-health__explanation { min-height: 110px; }
+.system-health__explanation p:last-child { margin: 10px 0 0; color: #cbd5e1; line-height: 1.55; }
 .system-health__insights { min-height: 150px; }
 .system-health__insights-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 12px; }
 .system-health__insights-grid > div { min-width: 0; }
