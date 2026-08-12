@@ -54,6 +54,10 @@ function saveHistory(history: HistoryPoint[]) {
   }
 }
 
+function clearStoredHistory() {
+  try { localStorage.removeItem(HISTORY_STORAGE_KEY); } catch { /* best effort */ }
+}
+
 export function SystemHealth() {
   const [snapshot, setSnapshot] = useState<SystemIntelligenceSnapshot | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>(loadHistory);
@@ -77,6 +81,12 @@ export function SystemHealth() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    if (!window.confirm("Clear all locally stored System Health history? The current live snapshot will remain available.")) return;
+    clearStoredHistory();
+    setHistory([]);
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -106,13 +116,13 @@ export function SystemHealth() {
     <section className="system-health" aria-labelledby="system-health-title">
       <div className="system-health__header">
         <div><p className="eyebrow">SYSTEM INTELLIGENCE</p><h2 id="system-health-title">System Health</h2><p className="subtitle">A read-only snapshot across storage, processes, network, and services.</p></div>
-        <button className="primary" type="button" onClick={() => void refresh()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
+        <div className="system-health__actions"><button className="primary" type="button" onClick={() => void refresh()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button><button className="secondary" type="button" onClick={clearHistory} disabled={history.length === 0}>Clear history</button></div>
       </div>
       {error ? <p role="alert" className="error">Unable to load system health: {error}</p> : loading && !snapshot ? <p className="system-health__loading">Reading system health…</p> : snapshot ? <>
         <div className="system-health__summary"><span className={healthClass[snapshot.health]}>{snapshot.health}</span><span>{snapshot.total_anomalies === 0 ? "No anomaly signals detected" : `${snapshot.total_anomalies} signal(s) requiring attention`}</span></div>
         <div className="system-health__grid">{signals.map(([label, value]) => <article className="system-health__signal card" key={label}><span className="label">{label.toUpperCase()}</span><strong>{value}</strong><span>{value === 0 ? "No signals detected" : "Signal(s) detected"}</span></article>)}</div>
         <div className="system-health__trend card"><div><p className="label">RECENT TREND</p><strong>{trend}</strong><span>{history.length} snapshots retained locally</span></div><div><p className="label">PERSISTENT SIGNALS</p><strong>{persistentSignals}</strong><span>subsystems signaled in each of the last 3 snapshots</span></div></div>
-        <div className="system-health__history card"><p className="label">HEALTH HISTORY</p><div className="system-health__history-bars" aria-label="Recent anomaly signal history">{history.map((point) => <span key={point.timestamp} className={`history-bar history-bar--${point.health.toLowerCase()}`} title={`${new Date(point.timestamp).toLocaleTimeString()} — ${point.total_anomalies} signal(s)`} style={{ height: `${Math.max(8, Math.min(100, point.total_anomalies * 20 + 8))}%` }} />)}</div><span>History is stored locally and bounded to the latest {MAX_HISTORY} snapshots.</span></div>
+        <div className="system-health__history card"><div className="system-health__history-header"><p className="label">HEALTH HISTORY</p><span>{history.length}/{MAX_HISTORY} snapshots</span></div><div className="system-health__history-bars" aria-label="Recent anomaly signal history">{history.map((point) => <span key={point.timestamp} className={`history-bar history-bar--${point.health.toLowerCase()}`} title={`${new Date(point.timestamp).toLocaleTimeString()} — ${point.total_anomalies} signal(s)`} style={{ height: `${Math.max(8, Math.min(100, point.total_anomalies * 20 + 8))}%` }} />)}</div><span>History is stored locally and bounded to the latest {MAX_HISTORY} snapshots.</span></div>
         <div className="system-health__guidance" aria-label="System health guidance"><div><p className="label">WHAT TO DO NEXT</p><p className="system-health__guidance-summary">{snapshot.total_anomalies === 0 ? "The current snapshot is healthy. No action is suggested." : "Use the subsystem guidance below to decide what to inspect next. These suggestions do not change system state."}</p></div><div className="system-health__guidance-grid">{signals.map(([label, value]) => <div className="system-health__guidance-item" key={`${label}-guidance`}><strong>{label}</strong><span>{value === 0 ? guidance[label].healthy : guidance[label].action}</span></div>)}</div></div>
       </> : null}
     </section>
