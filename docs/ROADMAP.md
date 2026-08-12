@@ -13,13 +13,62 @@ Linux Powerhouse is being developed as a local-first system intelligence platfor
 - **Bounded data:** retained local history must have explicit limits and safe reset behavior.
 - **No silent privilege escalation:** privileged operations, when eventually introduced, require explicit user intent and appropriate authorization.
 
-## Completed roadmap milestones
+## Recovered completed roadmap milestones
+
+The repository's historical PRs and branch names recover the roadmap from **Step 7 onward**. Steps 1–6 are not represented by dedicated feature branches in the available GitHub history, so they remain unreconstructed.
+
+### Steps 7–11 — Foundation, Desktop, Monitoring and Health Engine
+
+| Step | Milestone | Status |
+| --- | --- | --- |
+| 7 | Bootstrap Linux Powerhouse architecture | Complete |
+| 8 | Desktop shell with initial system dashboard | Complete |
+| 9 | System Dashboard v1 — storage, processes and network | Complete |
+| 10 | Realtime monitoring engine and live dashboard | Complete |
+| 11 | System health and deterministic anomaly engine | Complete |
+
+### Steps 12–16 — Linux Intelligence Layers
+
+| Step | Milestone | Status |
+| --- | --- | --- |
+| 12 | Storage Intelligence | Complete |
+| 13 | Process Intelligence | Complete |
+| 14 | Network Intelligence | Complete |
+| 15 | Service Intelligence | Complete |
+| 16 | Unified System Intelligence | Complete |
+
+> Step 15 had multiple intermediate `v2`–`v12` branches during development. These were implementation iterations, not separate roadmap milestones; the merged service-intelligence PR is the canonical Step 15 milestone.
+
+### Steps 17–21 — Desktop Health and Persistent History
+
+| Step | Milestone | Status |
+| --- | --- | --- |
+| 17 | Expose Unified System Health to Desktop | Complete |
+| 18 | Desktop System Health View | Complete |
+| 19 | Actionable System Health Guidance | Complete |
+| 20 | System Health History & Trends | Complete |
+| 21 | Persistent System Health History | Complete |
+
+### Steps 22–31 — Health History and Insight Explorer
+
+| Step | Milestone | Status |
+| --- | --- | --- |
+| 22 | System Health History Controls | Complete |
+| 23 | System Health History Insights | Complete |
+| 24 | System Health Insights Explanations | Complete |
+| 25 | Subsystem Health Details | Complete |
+| 26 | System Health History Export | Complete |
+| 27 | Health History Period Comparison | Complete |
+| 28 | Health Insight Timeline | Complete |
+| 29 | Health Insight Timeline Filters | Complete |
+| 30 | Health Insight Summary | Complete |
+| 31 | Actionable Health Insights | Complete |
 
 ### Steps 32–38 — Health Insights Explorer
 
 | Step | Milestone | Status |
 | --- | --- | --- |
-| 32 | Health Insight Export | Complete |
+| 32 | Focused Health Insight Export | Complete |
 | 33 | Local Health Insight Sharing | Complete |
 | 34 | Health Insight Filter Persistence | Complete |
 | 35 | Health Insight Search | Complete |
@@ -27,9 +76,7 @@ Linux Powerhouse is being developed as a local-first system intelligence platfor
 | 37 | Health Insight Grouping | Complete |
 | 38 | Health Insight Presets | Complete |
 
-The Health Insights Explorer now supports local history, filtering, persistence, search, sorting, grouping, reusable built-in/custom presets, export, and sharing.
-
-> Historical Steps 1–31 are intentionally not reconstructed here. Their exact original roadmap descriptions are not available in the repository context, so this document does not invent them.
+The Health Insights Explorer now supports local history, filtering, persistence, search, sorting, grouping, reusable built-in/custom presets, export, sharing, summaries, explanations, comparisons, and subsystem drill-down.
 
 ## Next roadmap area — Safe System Intelligence Actions
 
