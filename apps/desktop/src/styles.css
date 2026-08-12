@@ -19,8 +19,12 @@ nav { display: grid; gap: 6px; }
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
 .eyebrow, .label { color: #60a5fa; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
 h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margin: 0; color: #94a3b8; }
-.primary { padding: 11px 16px; color: white; background: #2563eb; border: 0; border-radius: 9px; font-weight: 700; cursor: pointer; }
-.primary:disabled { opacity: .65; cursor: wait; }
+.primary, .secondary { padding: 11px 16px; border-radius: 9px; font-weight: 700; cursor: pointer; }
+.primary { color: white; background: #2563eb; border: 0; }
+.primary:disabled, .secondary:disabled { opacity: .5; cursor: not-allowed; }
+.secondary { color: #cbd5e1; background: #1e293b; border: 1px solid #334155; }
+.secondary:hover:not(:disabled) { background: #273449; }
+.system-health__actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .card { min-height: 145px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; background: #111827; border: 1px solid #263244; border-radius: 14px; }
 .card.wide { grid-column: span 2; } .card strong { font-size: 20px; line-height: 1.25; overflow-wrap: anywhere; } .card > span:last-child { color: #94a3b8; font-size: 13px; }
@@ -43,6 +47,8 @@ h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margi
 .system-health__trend > div { min-height: 100px; }
 .system-health__trend strong { display: block; margin: 8px 0 5px; font-size: 24px; }
 .system-health__history { min-height: 180px; }
+.system-health__history-header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.system-health__history-header > span { color: #94a3b8; font-size: 12px; }
 .system-health__history-bars { height: 100px; display: flex; align-items: end; gap: 3px; margin: 12px 0; padding: 0 4px; border-bottom: 1px solid #263244; }
 .history-bar { flex: 1; min-width: 2px; border-radius: 3px 3px 0 0; opacity: .85; }
 .history-bar--healthy { background: #22c55e; }
