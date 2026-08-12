@@ -46,6 +46,11 @@ h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margi
 .system-health__trend { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .system-health__trend > div { min-height: 100px; }
 .system-health__trend strong { display: block; margin: 8px 0 5px; font-size: 24px; }
+.system-health__insights { min-height: 150px; }
+.system-health__insights-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 12px; }
+.system-health__insights-grid > div { min-width: 0; }
+.system-health__insights-grid strong { display: block; margin-bottom: 6px; font-size: 19px; }
+.system-health__insights-grid span { color: #94a3b8; font-size: 12px; line-height: 1.4; }
 .system-health__history { min-height: 180px; }
 .system-health__history-header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
 .system-health__history-header > span { color: #94a3b8; font-size: 12px; }
@@ -62,4 +67,4 @@ h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margi
 .system-health__guidance-item strong, .system-health__guidance-item span { display: block; }
 .system-health__guidance-item strong { font-size: 14px; }
 .system-health__guidance-item span { margin-top: 6px; color: #94a3b8; font-size: 12px; line-height: 1.45; }
-@media (max-width: 1050px) { .sidebar { width: 210px; } .content { padding: 32px; } .system-health__grid, .system-health__guidance-grid, .system-health__trend { grid-template-columns: 1fr; } }
+@media (max-width: 1050px) { .sidebar { width: 210px; } .content { padding: 32px; } .system-health__grid, .system-health__guidance-grid, .system-health__trend, .system-health__insights-grid { grid-template-columns: 1fr; } }
