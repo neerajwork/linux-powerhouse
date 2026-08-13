@@ -213,7 +213,8 @@ fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, St
         .lock()
         .map_err(|_| "monitor state unavailable".to_owned())?;
     let snapshot = monitor.snapshot().map_err(|error| error.to_string())?;
-    let storage = execution_engine::execute_storage_status(&context()).map_err(|error| error.to_string())?;
+    let storage =
+        execution_engine::execute_storage_status(&context()).map_err(|error| error.to_string())?;
     let max_storage_usage = storage.iter().map(|item| item.usage_percent).max();
     execute_health_status(&context(), Some(&snapshot), max_storage_usage)
         .map_err(|error| error.to_string())
