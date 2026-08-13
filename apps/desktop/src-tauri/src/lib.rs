@@ -19,6 +19,15 @@ struct AppState {
     monitor: Mutex<Monitor>,
 }
 
+#[derive(serde::Serialize)]
+struct SafeActionResult {
+    action: String,
+    status: String,
+    message: String,
+    reversible: bool,
+    privilege: String,
+}
+
 fn context() -> PolicyContext {
     PolicyContext {
         ai_requested: false,
@@ -82,6 +91,67 @@ fn service_analyze() -> Result<ServiceAnalysis, String> {
 }
 
 #[tauri::command]
+fn safe_system_action(action: String) -> Result<SafeActionResult, String> {
+    let result = match action.as_str() {
+        "refresh_health" => {
+            execute_unified_system_intelligence(&context(), "/".to_owned())
+                .map_err(|error| error.to_string())?;
+            SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "System health was refreshed.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            }
+        }
+        "storage_diagnostic" => {
+            execute_storage_analysis(&user_confirmed_context(), "/".to_owned(), ScanLimits::default())
+                .map_err(|error| error.to_string())?;
+            SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "Storage diagnostic completed without changing system state.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            }
+        }
+        "process_diagnostic" => {
+            execute_process_analysis(&user_confirmed_context()).map_err(|error| error.to_string())?;
+            SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "Process diagnostic completed without changing system state.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            }
+        }
+        "network_diagnostic" => {
+            execute_network_analysis(&user_confirmed_context()).map_err(|error| error.to_string())?;
+            SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "Network diagnostic completed without changing system state.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            }
+        }
+        "service_diagnostic" => {
+            execute_service_analysis(&user_confirmed_context()).map_err(|error| error.to_string())?;
+            SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "Service diagnostic completed without changing system state.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            }
+        }
+        _ => return Err("action is not in the safe system-action allowlist".to_owned()),
+    };
+
+    Ok(result)
+}
+
+#[tauri::command]
 fn monitor_snapshot(state: tauri::State<'_, AppState>) -> Result<MonitorSnapshot, String> {
     let mut monitor = state
         .monitor
@@ -129,6 +199,7 @@ pub fn run() {
             network_status,
             network_analyze,
             service_analyze,
+            safe_system_action,
             monitor_snapshot,
             monitor_history,
             health_status
