@@ -51,3 +51,14 @@ jobs:
 
       - name: Check desktop Rust crate
         run: cargo check -p linux-powerhouse-desktop --all-features
+
+      - name: Build Debian package
+        working-directory: apps/desktop
+        run: npm run tauri build -- --bundles deb
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-powerhouse-deb
+          path: apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
