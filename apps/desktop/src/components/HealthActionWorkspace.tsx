@@ -21,6 +21,12 @@ type ActionResult = {
   verification_status: string;
   verification_message: string;
 };
+type RemediationSuggestion = {
+  action: string;
+  reason: string;
+  suggested_action: string;
+  requires_confirmation: boolean;
+};
 
 const subsystems: Array<[Subsystem, keyof Omit<Snapshot, "health" | "total_anomalies">]> = [
   ["Storage", "storage_anomalies"],
@@ -47,6 +53,7 @@ export function HealthActionWorkspace() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult | null>(null);
+  const [remediation, setRemediation] = useState<RemediationSuggestion[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -59,6 +66,7 @@ export function HealthActionWorkspace() {
       if (!active.length) setSelected("Storage");
       setConfirmed(false);
       setResult(null);
+      setRemediation([]);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -88,10 +96,17 @@ export function HealthActionWorkspace() {
     setRunning(true);
     setError(null);
     setResult(null);
+    setRemediation([]);
     try {
       const next = await invoke<ActionResult>("safe_system_action", { action: action.id });
       setResult(next);
       setConfirmed(false);
+      const suggestions = await invoke<RemediationSuggestion[]>("action_remediation_suggestions", {
+        action: next.action,
+        status: next.status,
+        verificationStatus: next.verification_status,
+      });
+      setRemediation(suggestions);
       const refreshed = await invoke<Snapshot>("system_intelligence", { storageRoot: "/" });
       setSnapshot(refreshed);
     } catch (err) {
@@ -151,7 +166,7 @@ export function HealthActionWorkspace() {
                   <button
                     key={name}
                     className={`health-workspace__signal ${selected === name ? "active" : ""}`}
-                    onClick={() => { setSelected(name); setConfirmed(false); setResult(null); }}
+                    onClick={() => { setSelected(name); setConfirmed(false); setResult(null); setRemediation([]); }}
                   >
                     <span>{name}</span>
                     <strong>{snapshot[key]}</strong>
@@ -198,13 +213,29 @@ export function HealthActionWorkspace() {
           )}
 
           {result && (
-            <article className="health-workspace__result">
-              <span className="label">4 · VERIFY</span>
-              <h3>Action {result.status}</h3>
-              <p>{result.message}</p>
-              <span><strong>Verification:</strong> {result.verification_status || "pending"}{result.verification_message ? ` · ${result.verification_message}` : ""}</span>
-              <span className="muted">The execution was recorded locally in Action Audit.</span>
-            </article>
+            <>
+              <article className="health-workspace__result">
+                <span className="label">4 · VERIFY</span>
+                <h3>Action {result.status}</h3>
+                <p>{result.message}</p>
+                <div className="health-workspace__facts">
+                  <span>Verification <strong>{result.verification_status || "pending"}</strong></span>
+                  <span>Details <strong>{result.verification_message || "No additional verification details."}</strong></span>
+                </div>
+                <span className="muted">The execution was recorded locally in Action Audit.</span>
+              </article>
+
+              {remediation.map((suggestion) => (
+                <article className="health-workspace__result health-workspace__remediation" key={`${suggestion.action}-${suggestion.suggested_action}`}>
+                  <span className="label">5 · NEXT STEP</span>
+                  <h3>Recommended follow-up: {label(suggestion.suggested_action)}</h3>
+                  <p>{suggestion.reason}</p>
+                  <span className="muted">
+                    {suggestion.requires_confirmation ? "Explicit confirmation is required before this follow-up can run." : "No confirmation is required."}
+                  </span>
+                </article>
+              ))}
+            </>
           )}
         </>
       )}
