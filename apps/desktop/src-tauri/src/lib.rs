@@ -105,8 +105,12 @@ fn safe_system_action(action: String) -> Result<SafeActionResult, String> {
             }
         }
         "storage_diagnostic" => {
-            execute_storage_analysis(&user_confirmed_context(), "/".to_owned(), ScanLimits::default())
-                .map_err(|error| error.to_string())?;
+            execute_storage_analysis(
+                &user_confirmed_context(),
+                "/".to_owned(),
+                ScanLimits::default(),
+            )
+            .map_err(|error| error.to_string())?;
             SafeActionResult {
                 action,
                 status: "completed".to_owned(),
@@ -116,7 +120,8 @@ fn safe_system_action(action: String) -> Result<SafeActionResult, String> {
             }
         }
         "process_diagnostic" => {
-            execute_process_analysis(&user_confirmed_context()).map_err(|error| error.to_string())?;
+            execute_process_analysis(&user_confirmed_context())
+                .map_err(|error| error.to_string())?;
             SafeActionResult {
                 action,
                 status: "completed".to_owned(),
@@ -126,7 +131,8 @@ fn safe_system_action(action: String) -> Result<SafeActionResult, String> {
             }
         }
         "network_diagnostic" => {
-            execute_network_analysis(&user_confirmed_context()).map_err(|error| error.to_string())?;
+            execute_network_analysis(&user_confirmed_context())
+                .map_err(|error| error.to_string())?;
             SafeActionResult {
                 action,
                 status: "completed".to_owned(),
@@ -136,7 +142,8 @@ fn safe_system_action(action: String) -> Result<SafeActionResult, String> {
             }
         }
         "service_diagnostic" => {
-            execute_service_analysis(&user_confirmed_context()).map_err(|error| error.to_string())?;
+            execute_service_analysis(&user_confirmed_context())
+                .map_err(|error| error.to_string())?;
             SafeActionResult {
                 action,
                 status: "completed".to_owned(),
