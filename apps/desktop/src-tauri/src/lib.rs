@@ -102,69 +102,55 @@ fn safe_system_action(
 ) -> Result<SafeActionResult, String> {
     let action_name = action.clone();
     let outcome = match action.as_str() {
-        "refresh_health" => {
-            execute_unified_system_intelligence(&context(), "/".to_owned())
-                .map(|_| SafeActionResult {
-                    action,
-                    status: "completed".to_owned(),
-                    message: "System health was refreshed.".to_owned(),
-                    reversible: true,
-                    privilege: "None".to_owned(),
-                })
-                .map_err(|error| error.to_string())
-        }
-        "storage_diagnostic" => {
-            execute_storage_analysis(
-                &user_confirmed_context(),
-                "/".to_owned(),
-                ScanLimits::default(),
-            )
+        "refresh_health" => execute_unified_system_intelligence(&context(), "/".to_owned())
             .map(|_| SafeActionResult {
                 action,
                 status: "completed".to_owned(),
-                message: "Storage diagnostic completed without changing system state."
-                    .to_owned(),
+                message: "System health was refreshed.".to_owned(),
                 reversible: true,
                 privilege: "None".to_owned(),
             })
-            .map_err(|error| error.to_string())
-        }
-        "process_diagnostic" => {
-            execute_process_analysis(&user_confirmed_context())
-                .map(|_| SafeActionResult {
-                    action,
-                    status: "completed".to_owned(),
-                    message: "Process diagnostic completed without changing system state."
-                        .to_owned(),
-                    reversible: true,
-                    privilege: "None".to_owned(),
-                })
-                .map_err(|error| error.to_string())
-        }
-        "network_diagnostic" => {
-            execute_network_analysis(&user_confirmed_context())
-                .map(|_| SafeActionResult {
-                    action,
-                    status: "completed".to_owned(),
-                    message: "Network diagnostic completed without changing system state."
-                        .to_owned(),
-                    reversible: true,
-                    privilege: "None".to_owned(),
-                })
-                .map_err(|error| error.to_string())
-        }
-        "service_diagnostic" => {
-            execute_service_analysis(&user_confirmed_context())
-                .map(|_| SafeActionResult {
-                    action,
-                    status: "completed".to_owned(),
-                    message: "Service diagnostic completed without changing system state."
-                        .to_owned(),
-                    reversible: true,
-                    privilege: "None".to_owned(),
-                })
-                .map_err(|error| error.to_string())
-        }
+            .map_err(|error| error.to_string()),
+        "storage_diagnostic" => execute_storage_analysis(
+            &user_confirmed_context(),
+            "/".to_owned(),
+            ScanLimits::default(),
+        )
+        .map(|_| SafeActionResult {
+            action,
+            status: "completed".to_owned(),
+            message: "Storage diagnostic completed without changing system state.".to_owned(),
+            reversible: true,
+            privilege: "None".to_owned(),
+        })
+        .map_err(|error| error.to_string()),
+        "process_diagnostic" => execute_process_analysis(&user_confirmed_context())
+            .map(|_| SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "Process diagnostic completed without changing system state.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            })
+            .map_err(|error| error.to_string()),
+        "network_diagnostic" => execute_network_analysis(&user_confirmed_context())
+            .map(|_| SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "Network diagnostic completed without changing system state.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            })
+            .map_err(|error| error.to_string()),
+        "service_diagnostic" => execute_service_analysis(&user_confirmed_context())
+            .map(|_| SafeActionResult {
+                action,
+                status: "completed".to_owned(),
+                message: "Service diagnostic completed without changing system state.".to_owned(),
+                reversible: true,
+                privilege: "None".to_owned(),
+            })
+            .map_err(|error| error.to_string()),
         _ => Err("action is not in the safe system-action allowlist".to_owned()),
     };
 
@@ -228,8 +214,7 @@ fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, St
         .lock()
         .map_err(|_| "monitor state unavailable".to_owned())?;
     let snapshot = monitor.snapshot().map_err(|error| error.to_string())?;
-    let storage = execution_engine::execute_storage_status(&context())
-        .map_err(|error| error.to_string())?;
+    let storage = execution_engine::execute_storage_status(&context()).map_err(|error| error.to_string())?;
     let max_storage_usage = storage.iter().map(|item| item.usage_percent).max();
     execute_health_status(&context(), Some(&snapshot), max_storage_usage)
         .map_err(|error| error.to_string())
