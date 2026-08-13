@@ -55,8 +55,7 @@ fn system_status() -> Result<system_status::SystemStatus, String> {
 
 #[tauri::command]
 fn system_intelligence(storage_root: String) -> Result<SystemIntelligenceSnapshot, String> {
-    execute_unified_system_intelligence(&context(), storage_root)
-        .map_err(|error| error.to_string())
+    execute_unified_system_intelligence(&context(), storage_root).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -214,8 +213,7 @@ fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, St
         .lock()
         .map_err(|_| "monitor state unavailable".to_owned())?;
     let snapshot = monitor.snapshot().map_err(|error| error.to_string())?;
-    let storage =
-        execution_engine::execute_storage_status(&context()).map_err(|error| error.to_string())?;
+    let storage = execution_engine::execute_storage_status(&context()).map_err(|error| error.to_string())?;
     let max_storage_usage = storage.iter().map(|item| item.usage_percent).max();
     execute_health_status(&context(), Some(&snapshot), max_storage_usage)
         .map_err(|error| error.to_string())
