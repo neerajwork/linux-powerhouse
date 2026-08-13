@@ -15,7 +15,9 @@ pub fn verify_safe_action(action: &str, execution_succeeded: bool) -> ActionVeri
     } else {
         ActionVerification {
             status: "failed".to_owned(),
-            message: format!("{action} did not complete successfully, so its intended outcome could not be verified."),
+            message: format!(
+                "{action} did not complete successfully, so its intended outcome could not be verified."
+            ),
         }
     }
 }
