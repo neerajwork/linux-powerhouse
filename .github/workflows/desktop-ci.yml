@@ -27,7 +27,8 @@ jobs:
             libssl-dev \
             libwebkit2gtk-4.1-dev \
             libxdo-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            pkg-config
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -52,9 +53,54 @@ jobs:
       - name: Check desktop Rust crate
         run: cargo check -p linux-powerhouse-desktop --all-features
 
+  package-debian:
+    name: Debian 12 package
+    runs-on: ubuntu-latest
+    container:
+      image: node:24-bookworm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Debian 12 Tauri dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            git \
+            libayatana-appindicator3-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            pkg-config
+
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          . "$HOME/.cargo/env"
+          rustc --version
+          cargo --version
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop
+        run: npm install
+
+      - name: Generate Tauri icons
+        working-directory: apps/desktop
+        run: npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.svg
+
       - name: Build Debian package
         working-directory: apps/desktop
         run: npm run tauri build -- --bundles deb
+
+      - name: Verify Debian package
+        run: |
+          ls -lh target/release/bundle/deb/*.deb
+          file target/release/bundle/deb/*.deb
 
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
