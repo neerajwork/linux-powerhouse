@@ -3,7 +3,7 @@ mod action_remediation;
 mod action_verification;
 
 use action_audit::{ActionAudit, ActionAuditEntry};
-use action_remediation::{suggest_remediation, RemediationSuggestion};
+use action_remediation::{RemediationSuggestion, suggest_remediation};
 use action_verification::verify_safe_action;
 use std::sync::Mutex;
 
