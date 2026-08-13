@@ -1,7 +1,9 @@
 mod action_audit;
+mod action_remediation;
 mod action_verification;
 
 use action_audit::{ActionAudit, ActionAuditEntry};
+use action_remediation::{RemediationSuggestion, suggest_remediation};
 use action_verification::verify_safe_action;
 use std::sync::Mutex;
 
@@ -211,6 +213,15 @@ fn action_audit_history(
 }
 
 #[tauri::command]
+fn action_remediation_suggestions(
+    action: String,
+    status: String,
+    verification_status: String,
+) -> Vec<RemediationSuggestion> {
+    suggest_remediation(&action, &status, &verification_status)
+}
+
+#[tauri::command]
 fn monitor_snapshot(state: tauri::State<'_, AppState>) -> Result<MonitorSnapshot, String> {
     let mut monitor = state
         .monitor
@@ -261,6 +272,7 @@ pub fn run() {
             service_analyze,
             safe_system_action,
             action_audit_history,
+            action_remediation_suggestions,
             monitor_snapshot,
             monitor_history,
             health_status
