@@ -1,3 +1,6 @@
+mod action_audit;
+
+use action_audit::{ActionAudit, ActionAuditEntry};
 use std::sync::Mutex;
 
 use execution_engine::{
@@ -17,6 +20,7 @@ use unified_system_intelligence::SystemIntelligenceSnapshot;
 
 struct AppState {
     monitor: Mutex<Monitor>,
+    audit: ActionAudit,
 }
 
 #[derive(serde::Serialize)]
@@ -29,24 +33,16 @@ struct SafeActionResult {
 }
 
 fn context() -> PolicyContext {
-    PolicyContext {
-        ai_requested: false,
-        user_confirmed: false,
-    }
+    PolicyContext { ai_requested: false, user_confirmed: false }
 }
 
 fn user_confirmed_context() -> PolicyContext {
-    PolicyContext {
-        ai_requested: false,
-        user_confirmed: true,
-    }
+    PolicyContext { ai_requested: false, user_confirmed: true }
 }
 
 #[tauri::command]
 fn system_status() -> Result<system_status::SystemStatus, String> {
-    execute_system_status(&context())
-        .map(|result| result.status)
-        .map_err(|error| error.to_string())
+    execute_system_status(&context()).map(|result| result.status).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -61,8 +57,7 @@ fn storage_status() -> Result<Vec<storage_status::FilesystemStatus>, String> {
 
 #[tauri::command]
 fn storage_analyze(path: String) -> Result<StorageAnalysis, String> {
-    execute_storage_analysis(&user_confirmed_context(), path, ScanLimits::default())
-        .map_err(|error| error.to_string())
+    execute_storage_analysis(&user_confirmed_context(), path, ScanLimits::default()).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -91,125 +86,84 @@ fn service_analyze() -> Result<ServiceAnalysis, String> {
 }
 
 #[tauri::command]
-fn safe_system_action(action: String) -> Result<SafeActionResult, String> {
-    let result = match action.as_str() {
+fn safe_system_action(action: String, state: tauri::State<'_, AppState>) -> Result<SafeActionResult, String> {
+    let action_name = action.clone();
+    let outcome = match action.as_str() {
         "refresh_health" => {
             execute_unified_system_intelligence(&context(), "/".to_owned())
-                .map_err(|error| error.to_string())?;
-            SafeActionResult {
-                action,
-                status: "completed".to_owned(),
-                message: "System health was refreshed.".to_owned(),
-                reversible: true,
-                privilege: "None".to_owned(),
-            }
+                .map(|_| SafeActionResult { action, status: "completed".to_owned(), message: "System health was refreshed.".to_owned(), reversible: true, privilege: "None".to_owned() })
+                .map_err(|error| error.to_string())
         }
         "storage_diagnostic" => {
-            execute_storage_analysis(
-                &user_confirmed_context(),
-                "/".to_owned(),
-                ScanLimits::default(),
-            )
-            .map_err(|error| error.to_string())?;
-            SafeActionResult {
-                action,
-                status: "completed".to_owned(),
-                message: "Storage diagnostic completed without changing system state.".to_owned(),
-                reversible: true,
-                privilege: "None".to_owned(),
-            }
+            execute_storage_analysis(&user_confirmed_context(), "/".to_owned(), ScanLimits::default())
+                .map(|_| SafeActionResult { action, status: "completed".to_owned(), message: "Storage diagnostic completed without changing system state.".to_owned(), reversible: true, privilege: "None".to_owned() })
+                .map_err(|error| error.to_string())
         }
         "process_diagnostic" => {
             execute_process_analysis(&user_confirmed_context())
-                .map_err(|error| error.to_string())?;
-            SafeActionResult {
-                action,
-                status: "completed".to_owned(),
-                message: "Process diagnostic completed without changing system state.".to_owned(),
-                reversible: true,
-                privilege: "None".to_owned(),
-            }
+                .map(|_| SafeActionResult { action, status: "completed".to_owned(), message: "Process diagnostic completed without changing system state.".to_owned(), reversible: true, privilege: "None".to_owned() })
+                .map_err(|error| error.to_string())
         }
         "network_diagnostic" => {
             execute_network_analysis(&user_confirmed_context())
-                .map_err(|error| error.to_string())?;
-            SafeActionResult {
-                action,
-                status: "completed".to_owned(),
-                message: "Network diagnostic completed without changing system state.".to_owned(),
-                reversible: true,
-                privilege: "None".to_owned(),
-            }
+                .map(|_| SafeActionResult { action, status: "completed".to_owned(), message: "Network diagnostic completed without changing system state.".to_owned(), reversible: true, privilege: "None".to_owned() })
+                .map_err(|error| error.to_string())
         }
         "service_diagnostic" => {
             execute_service_analysis(&user_confirmed_context())
-                .map_err(|error| error.to_string())?;
-            SafeActionResult {
-                action,
-                status: "completed".to_owned(),
-                message: "Service diagnostic completed without changing system state.".to_owned(),
-                reversible: true,
-                privilege: "None".to_owned(),
-            }
+                .map(|_| SafeActionResult { action, status: "completed".to_owned(), message: "Service diagnostic completed without changing system state.".to_owned(), reversible: true, privilege: "None".to_owned() })
+                .map_err(|error| error.to_string())
         }
-        _ => return Err("action is not in the safe system-action allowlist".to_owned()),
+        _ => Err("action is not in the safe system-action allowlist".to_owned()),
     };
 
-    Ok(result)
+    match outcome {
+        Ok(result) => {
+            state.audit.record(&action_name, "executed", true, &result.status, &result.message, result.reversible, &result.privilege)?;
+            Ok(result)
+        }
+        Err(error) => {
+            let _ = state.audit.record(&action_name, "failed", true, "failed", &error, false, "Unknown");
+            Err(error)
+        }
+    }
+}
+
+#[tauri::command]
+fn action_audit_history(state: tauri::State<'_, AppState>) -> Result<Vec<ActionAuditEntry>, String> {
+    state.audit.history()
 }
 
 #[tauri::command]
 fn monitor_snapshot(state: tauri::State<'_, AppState>) -> Result<MonitorSnapshot, String> {
-    let mut monitor = state
-        .monitor
-        .lock()
-        .map_err(|_| "monitor state unavailable".to_owned())?;
+    let mut monitor = state.monitor.lock().map_err(|_| "monitor state unavailable".to_owned())?;
     execute_monitoring_snapshot(&context(), &mut monitor).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 fn monitor_history(state: tauri::State<'_, AppState>) -> Result<Vec<MonitorSnapshot>, String> {
-    let monitor = state
-        .monitor
-        .lock()
-        .map_err(|_| "monitor state unavailable".to_owned())?;
+    let monitor = state.monitor.lock().map_err(|_| "monitor state unavailable".to_owned())?;
     Ok(monitor.history())
 }
 
 #[tauri::command]
 fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, String> {
-    let mut monitor = state
-        .monitor
-        .lock()
-        .map_err(|_| "monitor state unavailable".to_owned())?;
+    let mut monitor = state.monitor.lock().map_err(|_| "monitor state unavailable".to_owned())?;
     let snapshot = monitor.snapshot().map_err(|error| error.to_string())?;
-    let storage =
-        execution_engine::execute_storage_status(&context()).map_err(|error| error.to_string())?;
+    let storage = execution_engine::execute_storage_status(&context()).map_err(|error| error.to_string())?;
     let max_storage_usage = storage.iter().map(|item| item.usage_percent).max();
-    execute_health_status(&context(), Some(&snapshot), max_storage_usage)
-        .map_err(|error| error.to_string())
+    execute_health_status(&context(), Some(&snapshot), max_storage_usage).map_err(|error| error.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(AppState {
-            monitor: Mutex::new(Monitor::new()),
-        })
+        .manage(AppState { monitor: Mutex::new(Monitor::new()), audit: ActionAudit })
         .invoke_handler(tauri::generate_handler![
-            system_status,
-            system_intelligence,
-            storage_status,
-            storage_analyze,
-            process_status,
-            process_analyze,
-            network_status,
-            network_analyze,
-            service_analyze,
-            safe_system_action,
-            monitor_snapshot,
-            monitor_history,
-            health_status
+            system_status, system_intelligence, storage_status, storage_analyze,
+            process_status, process_analyze, network_status, network_analyze,
+            service_analyze, safe_system_action, action_audit_history,
+            monitor_snapshot, monitor_history, health_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running Linux Powerhouse");
