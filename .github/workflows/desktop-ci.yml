@@ -60,5 +60,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-powerhouse-deb
-          path: apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+          path: target/release/bundle/deb/*.deb
           if-no-files-found: error
