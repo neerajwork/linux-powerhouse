@@ -15,6 +15,14 @@ pub struct ActionAuditEntry {
     pub message: String,
     pub reversible: bool,
     pub privilege: String,
+    #[serde(default = "default_verification_status")]
+    pub verification_status: String,
+    #[serde(default)]
+    pub verification_message: String,
+}
+
+fn default_verification_status() -> String {
+    "legacy".to_owned()
 }
 
 #[derive(Clone, Default)]
@@ -30,6 +38,8 @@ impl ActionAudit {
         message: &str,
         reversible: bool,
         privilege: &str,
+        verification_status: &str,
+        verification_message: &str,
     ) -> Result<ActionAuditEntry, String> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -45,6 +55,8 @@ impl ActionAudit {
             message: message.to_owned(),
             reversible,
             privilege: privilege.to_owned(),
+            verification_status: verification_status.to_owned(),
+            verification_message: verification_message.to_owned(),
         };
         let path = audit_path()?;
         if let Some(parent) = path.parent() {

@@ -1,6 +1,8 @@
 mod action_audit;
+mod action_verification;
 
 use action_audit::{ActionAudit, ActionAuditEntry};
+use action_verification::verify_safe_action;
 use std::sync::Mutex;
 
 use execution_engine::{
@@ -30,6 +32,8 @@ struct SafeActionResult {
     message: String,
     reversible: bool,
     privilege: String,
+    verification_status: String,
+    verification_message: String,
 }
 
 fn context() -> PolicyContext {
@@ -108,6 +112,8 @@ fn safe_system_action(
                 message: "System health was refreshed.".to_owned(),
                 reversible: true,
                 privilege: "None".to_owned(),
+                verification_status: String::new(),
+                verification_message: String::new(),
             })
             .map_err(|error| error.to_string()),
         "storage_diagnostic" => execute_storage_analysis(
@@ -121,6 +127,8 @@ fn safe_system_action(
             message: "Storage diagnostic completed without changing system state.".to_owned(),
             reversible: true,
             privilege: "None".to_owned(),
+            verification_status: String::new(),
+            verification_message: String::new(),
         })
         .map_err(|error| error.to_string()),
         "process_diagnostic" => execute_process_analysis(&user_confirmed_context())
@@ -130,6 +138,8 @@ fn safe_system_action(
                 message: "Process diagnostic completed without changing system state.".to_owned(),
                 reversible: true,
                 privilege: "None".to_owned(),
+                verification_status: String::new(),
+                verification_message: String::new(),
             })
             .map_err(|error| error.to_string()),
         "network_diagnostic" => execute_network_analysis(&user_confirmed_context())
@@ -139,6 +149,8 @@ fn safe_system_action(
                 message: "Network diagnostic completed without changing system state.".to_owned(),
                 reversible: true,
                 privilege: "None".to_owned(),
+                verification_status: String::new(),
+                verification_message: String::new(),
             })
             .map_err(|error| error.to_string()),
         "service_diagnostic" => execute_service_analysis(&user_confirmed_context())
@@ -148,25 +160,33 @@ fn safe_system_action(
                 message: "Service diagnostic completed without changing system state.".to_owned(),
                 reversible: true,
                 privilege: "None".to_owned(),
+                verification_status: String::new(),
+                verification_message: String::new(),
             })
             .map_err(|error| error.to_string()),
         _ => Err("action is not in the safe system-action allowlist".to_owned()),
     };
 
     match outcome {
-        Ok(result) => {
+        Ok(mut result) => {
+            let verification = verify_safe_action(&action_name, true);
+            result.verification_status = verification.status.clone();
+            result.verification_message = verification.message.clone();
             state.audit.record(
                 &action_name,
-                "executed",
+                "verified",
                 true,
                 &result.status,
                 &result.message,
                 result.reversible,
                 &result.privilege,
+                &verification.status,
+                &verification.message,
             )?;
             Ok(result)
         }
         Err(error) => {
+            let verification = verify_safe_action(&action_name, false);
             let _ = state.audit.record(
                 &action_name,
                 "failed",
@@ -175,6 +195,8 @@ fn safe_system_action(
                 &error,
                 false,
                 "Unknown",
+                &verification.status,
+                &verification.message,
             );
             Err(error)
         }
