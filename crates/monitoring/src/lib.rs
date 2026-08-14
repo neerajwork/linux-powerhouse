@@ -92,7 +92,6 @@ struct SampleState {
     cpu: CpuCounters,
     network: std::collections::HashMap<String, NetworkCounters>,
     disk: DiskCounters,
-    process: ProcessCounters,
     at: Instant,
 }
 
@@ -153,7 +152,6 @@ impl Monitor {
             cpu,
             network,
             disk,
-            process: process.clone(),
             at: now,
         });
 
