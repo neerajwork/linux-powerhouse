@@ -41,6 +41,7 @@ pub struct ProcessAnalysis {
     pub truncated: bool,
     pub zombie_count: usize,
     pub top_consumers: Vec<ProcessInsight>,
+    pub top_cpu_consumers: Vec<ProcessInsight>,
     pub anomalies: Vec<ProcessInsight>,
 }
 
@@ -165,6 +166,14 @@ pub fn analyze_with_limits(
     });
     let top_consumers = insights.iter().take(limits.top_n).cloned().collect();
 
+    let mut top_cpu = insights.clone();
+    top_cpu.sort_by(|a, b| {
+        b.cpu_time_ticks
+            .cmp(&a.cpu_time_ticks)
+            .then_with(|| a.pid.cmp(&b.pid))
+    });
+    let top_cpu_consumers = top_cpu.into_iter().take(limits.top_n).collect();
+
     let mut anomalies: Vec<_> = insights
         .iter()
         .filter(|process| process.anomaly.is_some())
@@ -179,6 +188,7 @@ pub fn analyze_with_limits(
         truncated,
         zombie_count,
         top_consumers,
+        top_cpu_consumers,
         anomalies,
     })
 }
@@ -252,7 +262,21 @@ mod tests {
         assert!(result.total_processes > 0);
         assert!(result.entries_scanned <= 20);
         assert!(result.top_consumers.len() <= 5);
+        assert!(result.top_cpu_consumers.len() <= 5);
         assert!(result.anomalies.len() <= 5);
+    }
+
+    #[test]
+    fn top_cpu_consumers_are_sorted() {
+        let result = analyze_with_limits(AnalysisLimits {
+            max_processes: 20,
+            top_n: 5,
+        })
+        .expect("process analysis should be readable on Linux CI");
+        assert!(result
+            .top_cpu_consumers
+            .windows(2)
+            .all(|pair| pair[0].cpu_time_ticks >= pair[1].cpu_time_ticks));
     }
 
     #[test]
