@@ -7,6 +7,7 @@ use thiserror::Error;
 const PROC_STAT: &str = "/proc/stat";
 const MEM_INFO: &str = "/proc/meminfo";
 const NET_DEV: &str = "/proc/net/dev";
+const DISK_STATS: &str = "/proc/diskstats";
 const HISTORY_LIMIT: usize = 120;
 
 #[derive(Debug, Error)]
@@ -28,12 +29,38 @@ pub struct NetworkRate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PerformanceBaseline {
+    pub cpu_percent: f64,
+    pub memory_percent: f64,
+    pub storage_read_bytes_per_second: f64,
+    pub storage_write_bytes_per_second: f64,
+    pub process_count: usize,
+    pub running_processes: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PerformanceDeviation {
+    pub cpu_percent: f64,
+    pub memory_percent: f64,
+    pub storage_read_bytes_per_second: f64,
+    pub storage_write_bytes_per_second: f64,
+    pub process_count: usize,
+    pub running_processes: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MonitorSnapshot {
     pub timestamp_ms: u128,
     pub cpu_percent: f64,
     pub memory_percent: f64,
     pub swap_percent: f64,
     pub network: Vec<NetworkRate>,
+    pub storage_read_bytes_per_second: f64,
+    pub storage_write_bytes_per_second: f64,
+    pub process_count: usize,
+    pub running_processes: usize,
+    pub baseline: Option<PerformanceBaseline>,
+    pub deviation: Option<PerformanceDeviation>,
 }
 
 #[derive(Debug, Clone)]
@@ -48,10 +75,24 @@ struct NetworkCounters {
     tx: u64,
 }
 
+#[derive(Debug, Clone, Default)]
+struct DiskCounters {
+    read_sectors: u64,
+    write_sectors: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+struct ProcessCounters {
+    total: usize,
+    running: usize,
+}
+
 #[derive(Debug)]
 struct SampleState {
     cpu: CpuCounters,
     network: std::collections::HashMap<String, NetworkCounters>,
+    disk: DiskCounters,
+    process: ProcessCounters,
     at: Instant,
 }
 
@@ -81,13 +122,17 @@ impl Monitor {
         let cpu = read_cpu()?;
         let memory = read_memory()?;
         let network = read_network()?;
+        let disk = read_disk()?;
+        let process = read_processes()?;
         let now = Instant::now();
-        let (cpu_percent, network_rates) = match &self.previous {
+        let (cpu_percent, network_rates, storage_read, storage_write) = match &self.previous {
             Some(previous) => {
                 let elapsed = now.duration_since(previous.at).as_secs_f64().max(0.001);
                 (
                     cpu_usage(&previous.cpu, &cpu),
                     network_rates(&previous.network, &network, elapsed),
+                    disk_rate(previous.disk.read_sectors, disk.read_sectors, elapsed),
+                    disk_rate(previous.disk.write_sectors, disk.write_sectors, elapsed),
                 )
             }
             None => (
@@ -100,20 +145,36 @@ impl Monitor {
                         tx_bytes_per_second: 0.0,
                     })
                     .collect(),
+                0.0,
+                0.0,
             ),
         };
         self.previous = Some(SampleState {
             cpu,
             network,
+            disk,
+            process: process.clone(),
             at: now,
         });
+
         let snapshot = MonitorSnapshot {
             timestamp_ms: self.started.elapsed().as_millis(),
             cpu_percent,
             memory_percent: percentage(memory.0, memory.1),
             swap_percent: percentage(memory.2, memory.3),
             network: network_rates,
+            storage_read_bytes_per_second: storage_read,
+            storage_write_bytes_per_second: storage_write,
+            process_count: process.total,
+            running_processes: process.running,
+            baseline: self.performance_baseline(),
+            deviation: None,
         };
+        let deviation = snapshot
+            .baseline
+            .as_ref()
+            .map(|baseline| deviation(&snapshot, baseline));
+        let snapshot = MonitorSnapshot { deviation, ..snapshot };
         if self.history.len() == HISTORY_LIMIT {
             self.history.pop_front();
         }
@@ -123,6 +184,31 @@ impl Monitor {
 
     pub fn history(&self) -> Vec<MonitorSnapshot> {
         self.history.iter().cloned().collect()
+    }
+
+    pub fn performance_baseline(&self) -> Option<PerformanceBaseline> {
+        if self.history.is_empty() {
+            return None;
+        }
+        let count = self.history.len() as f64;
+        Some(PerformanceBaseline {
+            cpu_percent: self.history.iter().map(|s| s.cpu_percent).sum::<f64>() / count,
+            memory_percent: self.history.iter().map(|s| s.memory_percent).sum::<f64>() / count,
+            storage_read_bytes_per_second: self
+                .history
+                .iter()
+                .map(|s| s.storage_read_bytes_per_second)
+                .sum::<f64>()
+                / count,
+            storage_write_bytes_per_second: self
+                .history
+                .iter()
+                .map(|s| s.storage_write_bytes_per_second)
+                .sum::<f64>()
+                / count,
+            process_count: average_usize(self.history.iter().map(|s| s.process_count)),
+            running_processes: average_usize(self.history.iter().map(|s| s.running_processes)),
+        })
     }
 }
 
@@ -193,6 +279,52 @@ fn read_network() -> Result<std::collections::HashMap<String, NetworkCounters>, 
     Ok(result)
 }
 
+fn read_disk() -> Result<DiskCounters, MonitoringError> {
+    let content = read(DISK_STATS)?;
+    let mut result = DiskCounters::default();
+    for line in content.lines() {
+        let values: Vec<&str> = line.split_whitespace().collect();
+        if values.len() < 14 {
+            continue;
+        }
+        result.read_sectors = result
+            .read_sectors
+            .saturating_add(values[5].parse::<u64>().unwrap_or(0));
+        result.write_sectors = result
+            .write_sectors
+            .saturating_add(values[9].parse::<u64>().unwrap_or(0));
+    }
+    Ok(result)
+}
+
+fn read_processes() -> Result<ProcessCounters, MonitoringError> {
+    let mut result = ProcessCounters::default();
+    for entry in fs::read_dir("/proc")? {
+        let entry = match entry {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.is_empty() || !name.bytes().all(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        let status = match fs::read_to_string(entry.path().join("status")) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        result.total += 1;
+        if status
+            .lines()
+            .find_map(|line| line.strip_prefix("State:"))
+            .is_some_and(|state| state.trim_start().starts_with('R'))
+        {
+            result.running += 1;
+        }
+    }
+    Ok(result)
+}
+
 fn cpu_usage(previous: &CpuCounters, current: &CpuCounters) -> f64 {
     let total = current.total.saturating_sub(previous.total);
     let idle = current.idle.saturating_sub(previous.idle);
@@ -201,6 +333,13 @@ fn cpu_usage(previous: &CpuCounters, current: &CpuCounters) -> f64 {
     } else {
         (100.0 * (total.saturating_sub(idle) as f64) / total as f64).clamp(0.0, 100.0)
     }
+}
+
+fn disk_rate(previous: u64, current: u64, seconds: f64) -> f64 {
+    current
+        .saturating_sub(previous)
+        .saturating_mul(512) as f64
+        / seconds
 }
 
 fn network_rates(
@@ -234,6 +373,28 @@ fn percentage(used: u64, total: u64) -> f64 {
     }
 }
 
+fn average_usize(values: impl Iterator<Item = usize>) -> usize {
+    let values: Vec<_> = values.collect();
+    if values.is_empty() {
+        0
+    } else {
+        ((values.iter().sum::<usize>() as f64 / values.len() as f64).round()) as usize
+    }
+}
+
+fn deviation(snapshot: &MonitorSnapshot, baseline: &PerformanceBaseline) -> PerformanceDeviation {
+    PerformanceDeviation {
+        cpu_percent: snapshot.cpu_percent - baseline.cpu_percent,
+        memory_percent: snapshot.memory_percent - baseline.memory_percent,
+        storage_read_bytes_per_second: snapshot.storage_read_bytes_per_second
+            - baseline.storage_read_bytes_per_second,
+        storage_write_bytes_per_second: snapshot.storage_write_bytes_per_second
+            - baseline.storage_write_bytes_per_second,
+        process_count: snapshot.process_count.abs_diff(baseline.process_count),
+        running_processes: snapshot.running_processes.abs_diff(baseline.running_processes),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,5 +419,19 @@ mod tests {
             let _ = monitor.snapshot();
         }
         assert!(monitor.history().len() <= HISTORY_LIMIT);
+    }
+
+    #[test]
+    fn disk_rate_converts_sectors_to_bytes_per_second() {
+        assert_eq!(disk_rate(100, 200, 2.0), 25_600.0);
+    }
+
+    #[test]
+    fn baseline_is_bounded_by_history() {
+        let mut monitor = Monitor::new();
+        for _ in 0..3 {
+            let _ = monitor.snapshot();
+        }
+        assert!(monitor.performance_baseline().is_some());
     }
 }
