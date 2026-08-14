@@ -3,7 +3,7 @@ mod action_remediation;
 mod action_verification;
 
 use action_audit::{ActionAudit, ActionAuditEntry};
-use action_remediation::{suggest_remediation, RemediationSuggestion};
+use action_remediation::{RemediationSuggestion, suggest_remediation};
 use action_verification::verify_safe_action;
 use std::sync::Mutex;
 
@@ -13,7 +13,7 @@ use execution_engine::{
     execute_service_analysis, execute_storage_analysis, execute_storage_status,
     execute_system_status, execute_unified_system_intelligence,
 };
-use health_status::{explain_performance, HealthSnapshot, PerformanceAnomalyReport};
+use health_status::{HealthSnapshot, PerformanceAnomalyReport, explain_performance};
 use monitoring::{Monitor, MonitorSnapshot};
 use network_intelligence::NetworkAnalysis;
 use policy_engine::PolicyContext;
