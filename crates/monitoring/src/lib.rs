@@ -302,7 +302,11 @@ fn read_disk() -> Result<DiskCounters, MonitoringError> {
 
 fn read_processes() -> Result<ProcessCounters, MonitoringError> {
     let mut result = ProcessCounters::default();
-    for entry in fs::read_dir("/proc")? {
+    let entries = fs::read_dir("/proc").map_err(|source| MonitoringError::Read {
+        path: "/proc",
+        source,
+    })?;
+    for entry in entries {
         let entry = match entry {
             Ok(value) => value,
             Err(_) => continue,
