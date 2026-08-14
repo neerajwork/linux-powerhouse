@@ -218,9 +218,7 @@ fn io_anomaly(
         format!("{label} is consistent with the recent local baseline.")
     } else {
         let rate = format_rate(absolute);
-        format!(
-            "{label} is {direction} than the recent local baseline by {rate}."
-        )
+        format!("{label} is {direction} than the recent local baseline by {rate}.")
     };
     PerformanceAnomaly {
         metric,
