@@ -3,7 +3,7 @@ mod action_remediation;
 mod action_verification;
 
 use action_audit::{ActionAudit, ActionAuditEntry};
-use action_remediation::{RemediationSuggestion, suggest_remediation};
+use action_remediation::{suggest_remediation, RemediationSuggestion};
 use action_verification::verify_safe_action;
 use std::sync::Mutex;
 
@@ -13,7 +13,7 @@ use execution_engine::{
     execute_service_analysis, execute_storage_analysis, execute_storage_status,
     execute_system_status, execute_unified_system_intelligence,
 };
-use health_status::HealthSnapshot;
+use health_status::{explain_performance, HealthSnapshot, PerformanceAnomalyReport};
 use monitoring::{Monitor, MonitorSnapshot};
 use network_intelligence::NetworkAnalysis;
 use policy_engine::PolicyContext;
@@ -245,6 +245,22 @@ fn monitor_history(state: tauri::State<'_, AppState>) -> Result<Vec<MonitorSnaps
 }
 
 #[tauri::command]
+fn performance_anomaly_explanations(
+    state: tauri::State<'_, AppState>,
+) -> Result<PerformanceAnomalyReport, String> {
+    let monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
+    let snapshot = monitor
+        .history()
+        .last()
+        .cloned()
+        .ok_or_else(|| "no monitoring snapshot is available".to_owned())?;
+    Ok(explain_performance(&snapshot))
+}
+
+#[tauri::command]
 fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, String> {
     let mut monitor = state
         .monitor
@@ -280,6 +296,7 @@ pub fn run() {
             action_remediation_suggestions,
             monitor_snapshot,
             monitor_history,
+            performance_anomaly_explanations,
             health_status
         ])
         .run(tauri::generate_context!())
