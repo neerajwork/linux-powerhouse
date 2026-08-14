@@ -11,6 +11,7 @@ dist/
 
 # Tauri / generated artifacts
 src-tauri/target/
+/apps/desktop/src-tauri/gen/
 
 # IDEs and editors
 .idea/

@@ -98,7 +98,10 @@ export function HealthActionWorkspace() {
     setResult(null);
     setRemediation([]);
     try {
-      const next = await invoke<ActionResult>("safe_system_action", { action: action.id });
+      const next = await invoke<ActionResult>("safe_system_action", {
+  action: action.id,
+  confirmed,
+});
       setResult(next);
       setConfirmed(false);
       const suggestions = await invoke<RemediationSuggestion[]>("action_remediation_suggestions", {

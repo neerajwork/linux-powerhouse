@@ -103,8 +103,13 @@ fn service_analyze() -> Result<ServiceAnalysis, String> {
 #[tauri::command]
 fn safe_system_action(
     action: String,
+    confirmed: bool,
     state: tauri::State<'_, AppState>,
 ) -> Result<SafeActionResult, String> {
+    if !confirmed {
+        return Err("explicit user confirmation is required".to_owned());
+    }
+
     let action_name = action.clone();
     let outcome = match action.as_str() {
         "refresh_health" => execute_unified_system_intelligence(&context(), "/".to_owned())
