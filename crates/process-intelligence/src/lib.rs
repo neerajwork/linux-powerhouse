@@ -273,10 +273,12 @@ mod tests {
             top_n: 5,
         })
         .expect("process analysis should be readable on Linux CI");
-        assert!(result
-            .top_cpu_consumers
-            .windows(2)
-            .all(|pair| pair[0].cpu_time_ticks >= pair[1].cpu_time_ticks));
+        assert!(
+            result
+                .top_cpu_consumers
+                .windows(2)
+                .all(|pair| pair[0].cpu_time_ticks >= pair[1].cpu_time_ticks)
+        );
     }
 
     #[test]
