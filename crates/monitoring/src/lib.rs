@@ -174,7 +174,10 @@ impl Monitor {
             .baseline
             .as_ref()
             .map(|baseline| deviation(&snapshot, baseline));
-        let snapshot = MonitorSnapshot { deviation, ..snapshot };
+        let snapshot = MonitorSnapshot {
+            deviation,
+            ..snapshot
+        };
         if self.history.len() == HISTORY_LIMIT {
             self.history.pop_front();
         }
@@ -336,10 +339,7 @@ fn cpu_usage(previous: &CpuCounters, current: &CpuCounters) -> f64 {
 }
 
 fn disk_rate(previous: u64, current: u64, seconds: f64) -> f64 {
-    current
-        .saturating_sub(previous)
-        .saturating_mul(512) as f64
-        / seconds
+    current.saturating_sub(previous).saturating_mul(512) as f64 / seconds
 }
 
 fn network_rates(
@@ -391,7 +391,9 @@ fn deviation(snapshot: &MonitorSnapshot, baseline: &PerformanceBaseline) -> Perf
         storage_write_bytes_per_second: snapshot.storage_write_bytes_per_second
             - baseline.storage_write_bytes_per_second,
         process_count: snapshot.process_count.abs_diff(baseline.process_count),
-        running_processes: snapshot.running_processes.abs_diff(baseline.running_processes),
+        running_processes: snapshot
+            .running_processes
+            .abs_diff(baseline.running_processes),
     }
 }
 
