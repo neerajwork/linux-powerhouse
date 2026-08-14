@@ -154,6 +154,12 @@ mod tests {
                 rx_bytes_per_second: 0.0,
                 tx_bytes_per_second: 0.0,
             }],
+            storage_read_bytes_per_second: 0.0,
+            storage_write_bytes_per_second: 0.0,
+            process_count: 0,
+            running_processes: 0,
+            baseline: None,
+            deviation: None,
         }
     }
 
