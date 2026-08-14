@@ -8,10 +8,10 @@ Linux Powerhouse is being developed as a local-first system intelligence platfor
 
 - **Local-first:** system observations and user preferences remain local unless an explicitly requested sharing/export flow is used.
 - **Read-only by default:** health and intelligence features do not mutate the system automatically.
-- **Explicit actions:** future remediation capabilities must be previewed, confirmed, narrowly scoped, and auditable.
+- **Explicit actions:** remediation capabilities must be previewed, confirmed, narrowly scoped, and auditable.
 - **Incremental delivery:** each roadmap step should produce a focused commit and pass Rust + Desktop CI before merge.
 - **Bounded data:** retained local history must have explicit limits and safe reset behavior.
-- **No silent privilege escalation:** privileged operations, when eventually introduced, require explicit user intent and appropriate authorization.
+- **No silent privilege escalation:** privileged operations require explicit user intent and appropriate authorization.
 
 ## Recovered completed roadmap milestones
 
@@ -78,69 +78,68 @@ The repository's historical PRs and branch names recover the roadmap from **Step
 
 The Health Insights Explorer now supports local history, filtering, persistence, search, sorting, grouping, reusable built-in/custom presets, export, sharing, summaries, explanations, comparisons, and subsystem drill-down.
 
-## Next roadmap area — Safe System Intelligence Actions
+## Steps 39–47 — Safe System Intelligence Actions
 
-The project now moves from **understanding system health** toward **helping the user decide what to do**, while preserving the read-only safety boundary until an action is explicitly approved.
+The project then moved from **understanding system health** toward **helping the user decide and act**, while preserving the safety boundary that AI and recommendations do not receive unrestricted system access.
 
-### Step 39 — Health Insight Recommendations
+| Step | Milestone | Status |
+| --- | --- | --- |
+| 39 | Health Insight Recommendations | Complete |
+| 40 | Action Preview | Complete |
+| 41 | Safe System Actions | Complete |
+| 42 | Action History and Audit | Complete |
+| 43 | Action Outcome Verification | Complete |
+| 44 | Action Remediation Suggestions | Complete |
+| 45 | Unified Health Action Workspace | Complete |
+| 46 | Action Execution Outcome | Complete |
+| 47 | Safe Follow-up Execution | Complete |
 
-Provide contextual, read-only recommendations for detected health signals.
+### Steps 43–47 — Execution Confidence and Guided Follow-up
 
-Acceptance goals:
+The safe-action foundation was subsequently extended with deterministic outcome verification, remediation guidance, a unified action workspace, explicit outcome presentation, and confirmation-gated follow-up execution.
 
-- Explain why a signal matters.
-- Associate recommendations with the relevant subsystem.
-- Show severity and confidence where meaningful.
-- Provide concise next-step guidance.
-- Never execute remediation automatically.
+These steps preserve the same safety model: recommendations remain informational until the user explicitly approves an action; execution remains constrained to registered safe actions; outcomes are recorded and presented; and follow-up execution requires explicit confirmation.
 
-### Step 40 — Action Preview
+## Next roadmap area — System Performance Intelligence
 
-Introduce a preview layer for proposed system actions without executing them.
+With the safe-action foundation established, the next phase should broaden Linux Powerhouse from health interpretation and remediation into deeper **system performance intelligence**. The next milestone should remain small, read-only, locally processed, and independently verifiable.
 
-Acceptance goals:
+### Step 48 — Performance Baseline and Trends
 
-- Describe exactly what an action would change.
-- Identify affected subsystem/resources.
-- Show expected impact and reversibility.
-- Identify permission requirements.
-- Require explicit confirmation before any execution path.
-
-### Step 41 — Safe System Actions
-
-Allow narrowly scoped, explicitly approved actions.
+Establish a unified read-only performance baseline for CPU, memory, storage I/O, and process activity, using existing monitoring/intelligence infrastructure where possible.
 
 Acceptance goals:
 
-- No silent remediation.
-- Explicit user confirmation.
-- Least-privilege execution.
-- Clear success/failure reporting.
-- Safe handling of unavailable permissions or unsupported actions.
+- Present current CPU, memory, storage I/O, and process activity in a consistent model.
+- Establish short-term local baselines and trends without requiring external services.
+- Identify meaningful deviations from the local baseline deterministically.
+- Reuse existing system-intelligence data instead of creating parallel collectors where practical.
+- Keep the feature read-only; no remediation or automatic action execution.
+- Expose data through the existing desktop architecture with focused, testable interfaces.
+- Preserve bounded local data and existing privacy/safety guarantees.
 
-### Step 42 — Action History and Audit
+### Future performance-intelligence steps
 
-Record user-approved system actions and their outcomes.
+Step 48 should be treated as the foundation for a sequence of small performance-intelligence milestones rather than a large dashboard rewrite. Candidate follow-up areas include:
 
-Acceptance goals:
+1. **Performance anomaly explanations** — explain why a CPU, memory, I/O, or process signal is unusual.
+2. **Process performance drill-down** — correlate resource usage with processes and services.
+3. **Performance history comparison** — compare current behavior with previous local periods.
+4. **Resource optimization recommendations** — suggest safe, explainable opportunities without automatically changing the system.
+5. **Cross-subsystem performance correlation** — connect CPU, memory, I/O, network, and service signals into higher-level narratives.
 
-- Timestamp and action identity.
-- Reason/context for the action.
-- Confirmation state.
-- Result and error details.
-- Reversibility/rollback state where applicable.
-- Local retention with bounded history and clear reset behavior.
+These remain candidate areas until each is defined as a focused roadmap step.
 
 ## Subsequent expansion areas
 
-After the safe-action foundation is complete, future roadmap areas should be evaluated against the architecture and user value rather than adding UI features mechanically. Candidate areas include:
+After performance intelligence, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value rather than adding UI features mechanically. Candidate areas include:
 
-1. **System Performance Intelligence** — CPU, memory, storage I/O, process and service trends.
-2. **Network Intelligence** — connectivity quality, interfaces, DNS and service reachability insights.
-3. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
-4. **Resource Optimization** — explainable opportunities to reduce resource consumption.
-5. **Automation** — carefully bounded recurring local workflows built on the action/audit foundation.
-6. **Cross-subsystem Correlation** — connect related signals into higher-level system narratives.
+1. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
+2. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
+3. **Resource Optimization** — explainable opportunities to reduce resource consumption.
+4. **Automation** — carefully bounded recurring local workflows built on the action/audit foundation.
+5. **Cross-subsystem Correlation** — connect related signals into higher-level system narratives.
+6. **Linux Tool Ecosystem** — selectively expose mature command-line utilities through the capability-oriented Tool Registry.
 
 These are candidates, not committed step numbers. Each should be broken into small roadmap steps after requirements and safety boundaries are defined.
 
