@@ -27,6 +27,12 @@ struct AppState {
     audit: ActionAudit,
 }
 
+#[derive(Debug, serde::Serialize)]
+struct PerformanceDrilldown {
+    performance: PerformanceAnomalyReport,
+    processes: ProcessAnalysis,
+}
+
 #[derive(serde::Serialize)]
 struct SafeActionResult {
     action: String,
@@ -261,6 +267,26 @@ fn performance_anomaly_explanations(
 }
 
 #[tauri::command]
+fn process_performance_drilldown(
+    state: tauri::State<'_, AppState>,
+) -> Result<PerformanceDrilldown, String> {
+    let monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
+    let snapshot = monitor
+        .history()
+        .last()
+        .cloned()
+        .ok_or_else(|| "no monitoring snapshot is available".to_owned())?;
+    let processes = process_intelligence::analyze().map_err(|error| error.to_string())?;
+    Ok(PerformanceDrilldown {
+        performance: explain_performance(&snapshot),
+        processes,
+    })
+}
+
+#[tauri::command]
 fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, String> {
     let mut monitor = state
         .monitor
@@ -297,6 +323,7 @@ pub fn run() {
             monitor_snapshot,
             monitor_history,
             performance_anomaly_explanations,
+            process_performance_drilldown,
             health_status
         ])
         .run(tauri::generate_context!())
