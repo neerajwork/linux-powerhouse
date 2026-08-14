@@ -51,20 +51,30 @@ pub fn explain(snapshot: &MonitorSnapshot) -> PerformanceAnomalyReport {
         return PerformanceAnomalyReport {
             overall: PerformanceAnomalyLevel::Normal,
             anomalies: Vec::new(),
-            summary: "Collecting enough local history to establish a performance baseline.".to_owned(),
+            summary:
+                "Collecting enough local history to establish a performance baseline.".to_owned(),
         };
     };
 
-    let deviation = snapshot.deviation.as_ref().unwrap_or(&PerformanceDeviation {
-        cpu_percent: snapshot.cpu_percent - baseline.cpu_percent,
-        memory_percent: snapshot.memory_percent - baseline.memory_percent,
-        storage_read_bytes_per_second:
-            snapshot.storage_read_bytes_per_second - baseline.storage_read_bytes_per_second,
-        storage_write_bytes_per_second:
-            snapshot.storage_write_bytes_per_second - baseline.storage_write_bytes_per_second,
-        process_count: snapshot.process_count.abs_diff(baseline.process_count),
-        running_processes: snapshot.running_processes.abs_diff(baseline.running_processes),
-    });
+    let computed_deviation;
+    let deviation = match snapshot.deviation.as_ref() {
+        Some(deviation) => deviation,
+        None => {
+            computed_deviation = PerformanceDeviation {
+                cpu_percent: snapshot.cpu_percent - baseline.cpu_percent,
+                memory_percent: snapshot.memory_percent - baseline.memory_percent,
+                storage_read_bytes_per_second: snapshot.storage_read_bytes_per_second
+                    - baseline.storage_read_bytes_per_second,
+                storage_write_bytes_per_second: snapshot.storage_write_bytes_per_second
+                    - baseline.storage_write_bytes_per_second,
+                process_count: snapshot.process_count.abs_diff(baseline.process_count),
+                running_processes: snapshot
+                    .running_processes
+                    .abs_diff(baseline.running_processes),
+            };
+            &computed_deviation
+        }
+    };
 
     let mut anomalies = vec![
         percent_anomaly(
@@ -131,8 +141,9 @@ pub fn explain(snapshot: &MonitorSnapshot) -> PerformanceAnomalyReport {
         .count();
 
     let summary = match overall {
-        PerformanceAnomalyLevel::Normal =>
-            "Current performance is consistent with the recent local baseline.".to_owned(),
+        PerformanceAnomalyLevel::Normal => {
+            "Current performance is consistent with the recent local baseline.".to_owned()
+        }
         PerformanceAnomalyLevel::Elevated => format!(
             "{elevated} performance signal{} elevated relative to the recent local baseline.",
             if elevated == 1 { " is" } else { "s are" }
@@ -159,7 +170,8 @@ fn percent_anomaly(
     label: &str,
 ) -> PerformanceAnomaly {
     let relative = relative_change(current, baseline);
-    let level = if deviation.abs() >= PERCENT_SIGNIFICANT_DELTA || relative >= RELATIVE_SIGNIFICANT {
+    let level = if deviation.abs() >= PERCENT_SIGNIFICANT_DELTA || relative >= RELATIVE_SIGNIFICANT
+    {
         PerformanceAnomalyLevel::Significant
     } else if deviation.abs() >= PERCENT_ELEVATED_DELTA || relative >= RELATIVE_ELEVATED {
         PerformanceAnomalyLevel::Elevated
@@ -256,7 +268,11 @@ fn count_anomaly(
 
 fn relative_change(current: f64, baseline: f64) -> f64 {
     if baseline.abs() < f64::EPSILON {
-        if current.abs() < f64::EPSILON { 0.0 } else { 1.0 }
+        if current.abs() < f64::EPSILON {
+            0.0
+        } else {
+            1.0
+        }
     } else {
         (current - baseline).abs() / baseline.abs()
     }
@@ -340,7 +356,10 @@ mod tests {
             None,
         ));
         assert_eq!(report.overall, PerformanceAnomalyLevel::Normal);
-        assert!(report.anomalies.iter().all(|item| item.level == PerformanceAnomalyLevel::Normal));
+        assert!(report
+            .anomalies
+            .iter()
+            .all(|item| item.level == PerformanceAnomalyLevel::Normal));
     }
 
     #[test]
@@ -356,7 +375,11 @@ mod tests {
             Some(base),
             None,
         ));
-        let cpu = report.anomalies.iter().find(|item| item.metric == PerformanceMetric::Cpu).unwrap();
+        let cpu = report
+            .anomalies
+            .iter()
+            .find(|item| item.metric == PerformanceMetric::Cpu)
+            .unwrap();
         assert_eq!(cpu.level, PerformanceAnomalyLevel::Elevated);
         assert!(cpu.explanation.contains("percentage points"));
     }
@@ -374,7 +397,11 @@ mod tests {
             Some(base),
             None,
         ));
-        let read = report.anomalies.iter().find(|item| item.metric == PerformanceMetric::StorageRead).unwrap();
+        let read = report
+            .anomalies
+            .iter()
+            .find(|item| item.metric == PerformanceMetric::StorageRead)
+            .unwrap();
         assert_eq!(read.level, PerformanceAnomalyLevel::Significant);
     }
 
@@ -391,7 +418,11 @@ mod tests {
             Some(base),
             None,
         ));
-        let processes = report.anomalies.iter().find(|item| item.metric == PerformanceMetric::ProcessCount).unwrap();
+        let processes = report
+            .anomalies
+            .iter()
+            .find(|item| item.metric == PerformanceMetric::ProcessCount)
+            .unwrap();
         assert_eq!(processes.level, PerformanceAnomalyLevel::Significant);
         assert!(processes.explanation.contains("60"));
     }
