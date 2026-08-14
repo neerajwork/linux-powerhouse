@@ -217,9 +217,9 @@ fn io_anomaly(
     let explanation = if level == PerformanceAnomalyLevel::Normal {
         format!("{label} is consistent with the recent local baseline.")
     } else {
+        let rate = format_rate(absolute);
         format!(
-            "{label} is {direction} than the recent local baseline by {}.",
-            format_rate(absolute)
+            "{label} is {direction} than the recent local baseline by {rate}."
         )
     };
     PerformanceAnomaly {
@@ -256,7 +256,7 @@ fn count_anomaly(
     let explanation = if level == PerformanceAnomalyLevel::Normal {
         format!("{label} is consistent with the recent local baseline.")
     } else {
-        format!("{label} is {direction} than the recent local baseline by {deviation}.",)
+        format!("{label} is {direction} than the recent local baseline by {deviation}.")
     };
     PerformanceAnomaly {
         metric,
