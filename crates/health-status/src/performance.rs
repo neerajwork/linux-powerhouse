@@ -51,8 +51,8 @@ pub fn explain(snapshot: &MonitorSnapshot) -> PerformanceAnomalyReport {
         return PerformanceAnomalyReport {
             overall: PerformanceAnomalyLevel::Normal,
             anomalies: Vec::new(),
-            summary:
-                "Collecting enough local history to establish a performance baseline.".to_owned(),
+            summary: "Collecting enough local history to establish a performance baseline."
+                .to_owned(),
         };
     };
 
@@ -248,13 +248,15 @@ fn count_anomaly(
     } else {
         PerformanceAnomalyLevel::Normal
     };
-    let direction = if current >= baseline { "higher" } else { "lower" };
+    let direction = if current >= baseline {
+        "higher"
+    } else {
+        "lower"
+    };
     let explanation = if level == PerformanceAnomalyLevel::Normal {
         format!("{label} is consistent with the recent local baseline.")
     } else {
-        format!(
-            "{label} is {direction} than the recent local baseline by {deviation}.",
-        )
+        format!("{label} is {direction} than the recent local baseline by {deviation}.",)
     };
     PerformanceAnomaly {
         metric,
@@ -356,10 +358,12 @@ mod tests {
             None,
         ));
         assert_eq!(report.overall, PerformanceAnomalyLevel::Normal);
-        assert!(report
-            .anomalies
-            .iter()
-            .all(|item| item.level == PerformanceAnomalyLevel::Normal));
+        assert!(
+            report
+                .anomalies
+                .iter()
+                .all(|item| item.level == PerformanceAnomalyLevel::Normal)
+        );
     }
 
     #[test]
