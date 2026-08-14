@@ -4,6 +4,12 @@ use monitoring::MonitorSnapshot;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod performance;
+pub use performance::{
+    PerformanceAnomaly, PerformanceAnomalyLevel, PerformanceAnomalyReport, PerformanceMetric,
+    explain as explain_performance,
+};
+
 const CPU_WARNING: f64 = 80.0;
 const CPU_CRITICAL: f64 = 95.0;
 const MEMORY_WARNING: f64 = 80.0;
