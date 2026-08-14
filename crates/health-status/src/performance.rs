@@ -369,7 +369,7 @@ mod tests {
     fn elevated_cpu_is_reported() {
         let base = baseline();
         let report = explain(&snapshot(
-            55.0,
+            54.0,
             50.0,
             2_000_000.0,
             2_000_000.0,
