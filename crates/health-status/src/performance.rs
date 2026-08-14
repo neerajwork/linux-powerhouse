@@ -1,4 +1,4 @@
-use monitoring::{MonitorSnapshot, PerformanceBaseline, PerformanceDeviation};
+use monitoring::{MonitorSnapshot, PerformanceDeviation};
 use serde::{Deserialize, Serialize};
 
 const PERCENT_ELEVATED_DELTA: f64 = 5.0;
@@ -294,6 +294,7 @@ mod tests {
     use super::*;
     use monitoring::{NetworkRate, PerformanceBaseline, PerformanceDeviation};
 
+    #[allow(clippy::too_many_arguments)]
     fn snapshot(
         cpu: f64,
         memory: f64,
