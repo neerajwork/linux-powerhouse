@@ -6,8 +6,8 @@ use thiserror::Error;
 
 pub mod performance;
 pub use performance::{
-    explain as explain_performance, PerformanceAnomaly, PerformanceAnomalyLevel,
-    PerformanceAnomalyReport, PerformanceMetric,
+    PerformanceAnomaly, PerformanceAnomalyLevel, PerformanceAnomalyReport, PerformanceMetric,
+    explain as explain_performance,
 };
 
 const CPU_WARNING: f64 = 80.0;
