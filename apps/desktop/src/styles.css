@@ -97,3 +97,46 @@ h1 { margin: 7px 0; font-size: 32px; letter-spacing: -.03em; } .subtitle { margi
 .health-workspace__safe { min-height: 140px; }
 .muted { color: #94a3b8; font-size: 12px; line-height: 1.45; }
 @media (max-width: 1050px) { .sidebar { width: 210px; } .content { padding: 32px; } .system-health__grid, .system-health__guidance-grid, .system-health__trend, .system-health__insights-grid { grid-template-columns: 1fr; } .health-workspace__status, .health-workspace__signals, .health-workspace__flow { grid-template-columns: 1fr; } .health-workspace__intro { flex-direction: column; } }
+.alert-controls {
+  gap: 16px;
+}
+
+.alert-controls h2 {
+  margin: 4px 0;
+}
+
+.alert-controls__list {
+  display: grid;
+  gap: 10px;
+}
+
+.alert-controls__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #263244;
+  border-radius: 10px;
+}
+
+.alert-controls__item > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.alert-controls__item > div:first-child span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.alert-controls__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.alert-controls small {
+  color: #94a3b8;
+}

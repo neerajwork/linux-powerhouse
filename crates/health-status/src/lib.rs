@@ -4,7 +4,9 @@ use monitoring::MonitorSnapshot;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod alerts;
 pub mod performance;
+pub use alerts::{AlertDecision, AlertPolicy, AlertSeverity, AlertState, alert_decision};
 pub use performance::{
     PerformanceAnomaly, PerformanceAnomalyLevel, PerformanceAnomalyReport, PerformanceMetric,
     explain as explain_performance,
@@ -32,7 +34,7 @@ pub enum HealthLevel {
     Critical,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SignalKind {
     Cpu,
     Memory,

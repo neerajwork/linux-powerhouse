@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { AlertControls } from "./AlertControls";
 
 type HealthLevel = "Healthy" | "Attention" | "Degraded";
 type Subsystem = "Storage" | "Processes" | "Network" | "Services";
@@ -70,7 +71,7 @@ export function SystemHealth() {
  return <section className="system-health" aria-labelledby="system-health-title">
   <div className="system-health__header"><div><p className="eyebrow">SYSTEM INTELLIGENCE</p><h2 id="system-health-title">System Health</h2><p className="subtitle">A read-only snapshot across storage, processes, network, and services.</p></div><div className="system-health__actions"><button className="primary" onClick={() => void refresh()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button><button className="secondary" onClick={() => void shareInsights()} disabled={!snapshot}>Share insights</button><button className="secondary" onClick={exportInsights} disabled={!snapshot}>Export insights</button><button className="secondary" onClick={exportHistory} disabled={!history.length}>Export history</button><button className="secondary" onClick={clear} disabled={!history.length}>Clear history</button></div></div>
   {shareStatus && <p role="status">{shareStatus}</p>}{error && <p role="alert" className="error">Unable to load system health: {error}</p>}
-  {loading && !snapshot ? <p>Reading system health…</p> : snapshot && <>
+  {loading && !snapshot ? <p>Reading system health…</p> : snapshot && <><AlertControls />
    <div className="system-health__summary"><span className={statusClass[snapshot.health]}>{snapshot.health}</span><span>{total === 0 ? "No anomaly signals detected" : `${total} signal(s) requiring attention`}</span></div>
    {insightSummary && <div className="system-health__insight-summary card"><p className="label">HEALTH INSIGHT SUMMARY</p><strong>{snapshot.health} · {insightSummary.period}</strong><span>{total} current signal(s) · {insightSummary.average.toFixed(1)} average across the latest {Math.min(6, history.length)} snapshot(s)</span><span>{insightSummary.dominant} is the dominant recent subsystem.</span></div>}
    {actionableInsight && <div className="system-health__actionable-insight card"><p className="label">SUGGESTED NEXT ACTION</p><strong>{actionableInsight.title}</strong><span>{actionableInsight.detail}</span><small>Informational only — no automatic remediation is performed.</small></div>}
