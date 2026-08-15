@@ -61,10 +61,31 @@ impl AlertPolicy {
         }
     }
 }
+pub fn alert_decision(
+    kind: SignalKind,
+    level: super::HealthLevel,
+    state: AlertState,
+    now_ms: u128,
+) -> Option<AlertDecision> {
+    let severity = match level {
+        super::HealthLevel::Healthy => return None,
+        super::HealthLevel::Warning => AlertSeverity::Warning,
+        super::HealthLevel::Critical => AlertSeverity::Critical,
+    };
+
+    let policy = AlertPolicy {
+        kind,
+        severity,
+        state,
+    };
+
+    Some(policy.decision(now_ms))
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::HealthLevel;
 
     #[test]
     fn active_warning_is_notified() {
@@ -108,5 +129,57 @@ mod tests {
 
         policy.snooze_until(10_000);
         assert_eq!(policy.decision(1_000), AlertDecision::Notify);
+    }
+
+    #[test]
+    fn healthy_signal_has_no_alert() {
+        assert_eq!(
+            alert_decision(
+                SignalKind::Cpu,
+                HealthLevel::Healthy,
+                AlertState::Active,
+                1_000,
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn warning_signal_respects_snooze() {
+        assert_eq!(
+            alert_decision(
+                SignalKind::Memory,
+                HealthLevel::Warning,
+                AlertState::Snoozed { until_ms: 2_000 },
+                1_000,
+            ),
+            Some(AlertDecision::Suppressed)
+        );
+    }
+
+    #[test]
+    fn critical_signal_ignores_snooze() {
+        assert_eq!(
+            alert_decision(
+                SignalKind::Storage,
+                HealthLevel::Critical,
+                AlertState::Snoozed { until_ms: 10_000 },
+                1_000,
+            ),
+            Some(AlertDecision::Notify)
+        );
+    }
+
+    #[test]
+    fn critical_signal_ignores_dismissal() {
+        assert_eq!(
+            alert_decision(
+                SignalKind::Network,
+                HealthLevel::Critical,
+                AlertState::Dismissed,
+                1_000,
+            ),
+            Some(AlertDecision::Notify)
+        );
     }
 }
