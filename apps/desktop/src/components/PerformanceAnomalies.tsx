@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 type Level = "Normal" | "Elevated" | "Significant";
 type Metric = "Cpu" | "Memory" | "StorageRead" | "StorageWrite" | "ProcessCount" | "RunningProcesses";
+type ChangeDirection = "Increased" | "Decreased" | "Stable";
 
 type PerformanceAnomaly = {
   metric: Metric;
@@ -42,6 +43,26 @@ type ProcessAnalysis = {
   anomalies: ProcessInsight[];
 };
 
+type PerformanceMetricComparison = {
+  current_average: number;
+  previous_average: number;
+  absolute_delta: number;
+  percentage_delta: number | null;
+  direction: ChangeDirection;
+};
+
+type PerformanceHistoryComparison = {
+  current_samples: number;
+  previous_samples: number;
+  window_size: number;
+  cpu: PerformanceMetricComparison;
+  memory: PerformanceMetricComparison;
+  storage_read_bytes_per_second: PerformanceMetricComparison;
+  storage_write_bytes_per_second: PerformanceMetricComparison;
+  process_count: PerformanceMetricComparison;
+  running_processes: PerformanceMetricComparison;
+};
+
 type PerformanceDrilldown = {
   performance: PerformanceAnomalyReport;
   processes: ProcessAnalysis;
@@ -56,24 +77,42 @@ const labels: Record<Metric, string> = {
   RunningProcesses: "Running processes",
 };
 
+const comparisonLabels = [
+  ["CPU utilization", "cpu"],
+  ["Memory utilization", "memory"],
+  ["Storage read", "storage_read_bytes_per_second"],
+  ["Storage write", "storage_write_bytes_per_second"],
+  ["Process count", "process_count"],
+  ["Running processes", "running_processes"],
+] as const;
+
 const levelClass = (level: Level) => level.toLowerCase();
 const formatMemory = (bytes: number) => {
   if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / 1024).toFixed(1)} KB`;
 };
+const formatValue = (value: number, label: string) =>
+  label.includes("CPU") || label.includes("Memory") ? `${value.toFixed(1)}%` : value.toFixed(1);
+const directionSymbol = (direction: ChangeDirection) =>
+  direction === "Increased" ? "↑" : direction === "Decreased" ? "↓" : "→";
 
 export function PerformanceAnomalies() {
   const [report, setReport] = useState<PerformanceDrilldown | null>(null);
+  const [comparison, setComparison] = useState<PerformanceHistoryComparison | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       try {
-        const next = await invoke<PerformanceDrilldown>("process_performance_drilldown");
+        const [next, historyComparison] = await Promise.all([
+          invoke<PerformanceDrilldown>("process_performance_drilldown"),
+          invoke<PerformanceHistoryComparison>("performance_history_comparison").catch(() => null),
+        ]);
         if (active) {
           setReport(next);
+          setComparison(historyComparison);
           setError(null);
         }
       } catch (err) {
@@ -108,6 +147,30 @@ export function PerformanceAnomalies() {
         <b className={`performance-level ${levelClass(item.level)}`}>{item.level}</b>
       </div>)}
     </div>
+
+    {comparison && <>
+      <div className="monitor-heading">
+        <div>
+          <span className="label">PERFORMANCE HISTORY</span>
+          <strong>Recent period comparison</strong>
+        </div>
+        <span className="muted">{comparison.current_samples} vs {comparison.previous_samples} samples</span>
+      </div>
+      <p className="muted">Current averages compared with the immediately preceding local {comparison.window_size}-sample period. Changes are descriptive only; higher activity is not automatically treated as a problem.</p>
+      <div className="performance-anomalies">
+        {comparisonLabels.map(([label, key]) => {
+          const item = comparison[key];
+          const percent = item.percentage_delta === null ? "n/a" : `${item.percentage_delta >= 0 ? "+" : ""}${item.percentage_delta.toFixed(1)}%`;
+          return <div className="rate-row" key={key}>
+            <div>
+              <strong>{label}</strong>
+              <span>{formatValue(item.current_average, label)} vs {formatValue(item.previous_average, label)} · Δ {item.absolute_delta >= 0 ? "+" : ""}{item.absolute_delta.toFixed(1)} · {percent}</span>
+            </div>
+            <b className="performance-level normal">{directionSymbol(item.direction)} {item.direction}</b>
+          </div>;
+        })}
+      </div>
+    </>}
 
     <div className="monitor-heading">
       <div>

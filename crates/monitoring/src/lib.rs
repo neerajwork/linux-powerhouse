@@ -9,6 +9,7 @@ const MEM_INFO: &str = "/proc/meminfo";
 const NET_DEV: &str = "/proc/net/dev";
 const DISK_STATS: &str = "/proc/diskstats";
 const HISTORY_LIMIT: usize = 120;
+const COMPARISON_WINDOW: usize = 10;
 
 #[derive(Debug, Error)]
 pub enum MonitoringError {
@@ -46,6 +47,35 @@ pub struct PerformanceDeviation {
     pub storage_write_bytes_per_second: f64,
     pub process_count: usize,
     pub running_processes: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PerformanceChangeDirection {
+    Increased,
+    Decreased,
+    Stable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PerformanceMetricComparison {
+    pub current_average: f64,
+    pub previous_average: f64,
+    pub absolute_delta: f64,
+    pub percentage_delta: Option<f64>,
+    pub direction: PerformanceChangeDirection,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PerformanceHistoryComparison {
+    pub current_samples: usize,
+    pub previous_samples: usize,
+    pub window_size: usize,
+    pub cpu: PerformanceMetricComparison,
+    pub memory: PerformanceMetricComparison,
+    pub storage_read_bytes_per_second: PerformanceMetricComparison,
+    pub storage_write_bytes_per_second: PerformanceMetricComparison,
+    pub process_count: PerformanceMetricComparison,
+    pub running_processes: PerformanceMetricComparison,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -210,6 +240,90 @@ impl Monitor {
             process_count: average_usize(self.history.iter().map(|s| s.process_count)),
             running_processes: average_usize(self.history.iter().map(|s| s.running_processes)),
         })
+    }
+
+    pub fn performance_history_comparison(&self) -> Option<PerformanceHistoryComparison> {
+        compare_history(
+            &self.history.iter().cloned().collect::<Vec<_>>(),
+            COMPARISON_WINDOW,
+        )
+    }
+}
+
+fn compare_history(
+    history: &[MonitorSnapshot],
+    window_size: usize,
+) -> Option<PerformanceHistoryComparison> {
+    if window_size == 0 || history.len() < window_size.saturating_mul(2) {
+        return None;
+    }
+
+    let split = history.len() - window_size;
+    let previous_start = split - window_size;
+    let previous = &history[previous_start..split];
+    let current = &history[split..];
+
+    Some(PerformanceHistoryComparison {
+        current_samples: current.len(),
+        previous_samples: previous.len(),
+        window_size,
+        cpu: compare_metric(
+            average_f64(current.iter().map(|s| s.cpu_percent)),
+            average_f64(previous.iter().map(|s| s.cpu_percent)),
+        ),
+        memory: compare_metric(
+            average_f64(current.iter().map(|s| s.memory_percent)),
+            average_f64(previous.iter().map(|s| s.memory_percent)),
+        ),
+        storage_read_bytes_per_second: compare_metric(
+            average_f64(current.iter().map(|s| s.storage_read_bytes_per_second)),
+            average_f64(previous.iter().map(|s| s.storage_read_bytes_per_second)),
+        ),
+        storage_write_bytes_per_second: compare_metric(
+            average_f64(current.iter().map(|s| s.storage_write_bytes_per_second)),
+            average_f64(previous.iter().map(|s| s.storage_write_bytes_per_second)),
+        ),
+        process_count: compare_metric(
+            average_f64(current.iter().map(|s| s.process_count as f64)),
+            average_f64(previous.iter().map(|s| s.process_count as f64)),
+        ),
+        running_processes: compare_metric(
+            average_f64(current.iter().map(|s| s.running_processes as f64)),
+            average_f64(previous.iter().map(|s| s.running_processes as f64)),
+        ),
+    })
+}
+
+fn compare_metric(current_average: f64, previous_average: f64) -> PerformanceMetricComparison {
+    let absolute_delta = current_average - previous_average;
+    let percentage_delta = if previous_average.abs() < f64::EPSILON {
+        None
+    } else {
+        Some((absolute_delta / previous_average) * 100.0)
+    };
+    let direction = if absolute_delta.abs() < 0.000_001 {
+        PerformanceChangeDirection::Stable
+    } else if absolute_delta > 0.0 {
+        PerformanceChangeDirection::Increased
+    } else {
+        PerformanceChangeDirection::Decreased
+    };
+
+    PerformanceMetricComparison {
+        current_average,
+        previous_average,
+        absolute_delta,
+        percentage_delta,
+        direction,
+    }
+}
+
+fn average_f64(values: impl Iterator<Item = f64>) -> f64 {
+    let values: Vec<_> = values.collect();
+    if values.is_empty() {
+        0.0
+    } else {
+        values.iter().sum::<f64>() / values.len() as f64
     }
 }
 
@@ -403,6 +517,29 @@ fn deviation(snapshot: &MonitorSnapshot, baseline: &PerformanceBaseline) -> Perf
 mod tests {
     use super::*;
 
+    fn sample(
+        cpu: f64,
+        memory: f64,
+        read: f64,
+        write: f64,
+        processes: usize,
+        running: usize,
+    ) -> MonitorSnapshot {
+        MonitorSnapshot {
+            timestamp_ms: 0,
+            cpu_percent: cpu,
+            memory_percent: memory,
+            swap_percent: 0.0,
+            network: Vec::new(),
+            storage_read_bytes_per_second: read,
+            storage_write_bytes_per_second: write,
+            process_count: processes,
+            running_processes: running,
+            baseline: None,
+            deviation: None,
+        }
+    }
+
     #[test]
     fn cpu_usage_is_bounded() {
         let previous = CpuCounters {
@@ -437,5 +574,53 @@ mod tests {
             let _ = monitor.snapshot();
         }
         assert!(monitor.performance_baseline().is_some());
+    }
+
+    #[test]
+    fn history_comparison_uses_adjacent_windows() {
+        let mut history = Vec::new();
+        for _ in 0..10 {
+            history.push(sample(10.0, 20.0, 100.0, 50.0, 100, 10));
+        }
+        for _ in 0..10 {
+            history.push(sample(20.0, 30.0, 200.0, 25.0, 120, 15));
+        }
+
+        let comparison = compare_history(&history, 10).expect("comparison should be available");
+        assert_eq!(comparison.current_samples, 10);
+        assert_eq!(comparison.previous_samples, 10);
+        assert_eq!(comparison.cpu.current_average, 20.0);
+        assert_eq!(comparison.cpu.previous_average, 10.0);
+        assert_eq!(comparison.cpu.absolute_delta, 10.0);
+        assert_eq!(comparison.cpu.percentage_delta, Some(100.0));
+        assert_eq!(
+            comparison.cpu.direction,
+            PerformanceChangeDirection::Increased
+        );
+        assert_eq!(
+            comparison.storage_write_bytes_per_second.direction,
+            PerformanceChangeDirection::Decreased
+        );
+    }
+
+    #[test]
+    fn history_comparison_requires_two_windows() {
+        let history = vec![sample(10.0, 20.0, 100.0, 50.0, 100, 10); 19];
+        assert!(compare_history(&history, 10).is_none());
+    }
+
+    #[test]
+    fn zero_previous_average_has_no_percentage_delta() {
+        let comparison = compare_metric(5.0, 0.0);
+        assert_eq!(comparison.percentage_delta, None);
+        assert_eq!(comparison.direction, PerformanceChangeDirection::Increased);
+    }
+
+    #[test]
+    fn unchanged_metric_is_stable() {
+        let comparison = compare_metric(10.0, 10.0);
+        assert_eq!(comparison.absolute_delta, 0.0);
+        assert_eq!(comparison.percentage_delta, Some(0.0));
+        assert_eq!(comparison.direction, PerformanceChangeDirection::Stable);
     }
 }
