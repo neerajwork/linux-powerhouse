@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   ALERT_CATEGORIES,
   type AlertCategory,
@@ -7,6 +8,24 @@ import {
   restoreExpiredSnoozes,
   writeAlertPreferences,
 } from "../alerts";
+
+type HealthLevel = "Healthy" | "Warning" | "Critical";
+
+type SignalKind = "Cpu" | "Memory" | "Swap" | "Storage" | "Network";
+
+type HealthSignal = {
+  kind: SignalKind;
+  level: HealthLevel;
+  value: number;
+  message: string;
+};
+
+type HealthSnapshot = {
+  overall: HealthLevel;
+  signals: HealthSignal[];
+};
+
+type AlertDecision = "Notify" | "Suppressed";
 
 const SNOOZE_DAYS = [7, 14, 30] as const;
 
@@ -28,15 +47,98 @@ function categoryLabel(category: AlertCategory): string {
 function formatSnooze(until: number): string {
   return `Snoozed until ${new Date(until).toLocaleDateString()}`;
 }
+async function decisionForSignal(
+  signal: HealthSignal,
+  preference: AlertPreference,
+): Promise<AlertDecision | null> {
+  return invoke<AlertDecision | null>("alert_decision_for_signal", {
+    kind: signal.kind,
+    level: signal.level,
+    state:
+      preference.state === "Snoozed"
+        ? {
+            Snoozed: {
+              until_ms: preference.snoozedUntil ?? 0,
+            },
+          }
+        : preference.state,
+    nowMs: Date.now(),
+  });
+}
 
 export function AlertControls() {
   const [preferences, setPreferences] = useState<AlertPreference[]>(() =>
     restoreExpiredSnoozes(readAlertPreferences()),
   );
+  const [health, setHealth] = useState<HealthSnapshot | null>(null);
+  const [decisions, setDecisions] = useState<
+    Partial<Record<AlertCategory, AlertDecision>>
+  >({});
 
   useEffect(() => {
     writeAlertPreferences(preferences);
   }, [preferences]);
+  useEffect(() => {
+    let cancelled = false;
+
+    void invoke<HealthSnapshot>("health_status")
+      .then((result) => {
+        if (!cancelled) setHealth(result);
+      })
+      .catch(() => {
+        if (!cancelled) setHealth(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
+    if (!health) {
+      setDecisions({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all(
+      health.signals.map(async (signal) => {
+        const preference = preferences.find(
+          (item) => item.category === signal.kind,
+        );
+
+        if (!preference) {
+          return null;
+        }
+
+        const decision = await decisionForSignal(signal, preference);
+        return [signal.kind, decision] as const;
+      }),
+    )
+      .then((results) => {
+        if (cancelled) return;
+
+        const next: Partial<Record<AlertCategory, AlertDecision>> = {};
+
+        for (const result of results) {
+          if (result) {
+            const [category, decision] = result;
+            if (decision !== null) {
+              next[category] = decision;
+            }
+          }
+        }
+
+        setDecisions(next);
+      })
+      .catch(() => {
+        if (!cancelled) setDecisions({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [health, preferences]);
 
   function updatePreference(
     category: AlertCategory,
@@ -111,6 +213,13 @@ events are always reported.
               <div>
                 <strong>{categoryLabel(category)}</strong>
                 <span>{preferenceLabel(preference)}</span>
+                {decisions[category] && (
+                  <small>
+                    {decisions[category] === "Notify"
+                      ? "Current signal: notification enabled"
+                      : "Current signal: suppressed"}
+                  </small>
+                )}
               </div>
 
               <div className="alert-controls__actions">
