@@ -1,3 +1,4 @@
+use super::SignalKind;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -21,13 +22,15 @@ pub enum AlertDecision {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AlertPolicy {
+    pub kind: SignalKind,
     pub severity: AlertSeverity,
     pub state: AlertState,
 }
 
 impl AlertPolicy {
-    pub fn new(severity: AlertSeverity) -> Self {
+    pub fn new(kind: SignalKind, severity: AlertSeverity) -> Self {
         Self {
+            kind,
             severity,
             state: AlertState::Active,
         }
@@ -65,14 +68,14 @@ mod tests {
 
     #[test]
     fn active_warning_is_notified() {
-        let policy = AlertPolicy::new(AlertSeverity::Warning);
+        let policy = AlertPolicy::new(SignalKind::Cpu, AlertSeverity::Warning);
 
         assert_eq!(policy.decision(1_000), AlertDecision::Notify);
     }
 
     #[test]
     fn dismissed_warning_is_suppressed() {
-        let mut policy = AlertPolicy::new(AlertSeverity::Warning);
+        let mut policy = AlertPolicy::new(SignalKind::Cpu, AlertSeverity::Warning);
         policy.dismiss();
 
         assert_eq!(policy.decision(1_000), AlertDecision::Suppressed);
@@ -80,7 +83,7 @@ mod tests {
 
     #[test]
     fn warning_stays_suppressed_until_snooze_expires() {
-        let mut policy = AlertPolicy::new(AlertSeverity::Warning);
+        let mut policy = AlertPolicy::new(SignalKind::Cpu, AlertSeverity::Warning);
         policy.snooze_until(2_000);
 
         assert_eq!(policy.decision(1_999), AlertDecision::Suppressed);
@@ -89,7 +92,7 @@ mod tests {
 
     #[test]
     fn restored_warning_is_notified_again() {
-        let mut policy = AlertPolicy::new(AlertSeverity::Warning);
+        let mut policy = AlertPolicy::new(SignalKind::Cpu, AlertSeverity::Warning);
         policy.snooze_until(2_000);
         policy.restore();
 
@@ -98,7 +101,7 @@ mod tests {
 
     #[test]
     fn critical_alert_cannot_be_suppressed() {
-        let mut policy = AlertPolicy::new(AlertSeverity::Critical);
+        let mut policy = AlertPolicy::new(SignalKind::Cpu, AlertSeverity::Critical);
 
         policy.dismiss();
         assert_eq!(policy.decision(1_000), AlertDecision::Notify);

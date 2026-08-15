@@ -33,7 +33,7 @@ pub enum HealthLevel {
     Critical,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SignalKind {
     Cpu,
     Memory,
