@@ -243,7 +243,10 @@ impl Monitor {
     }
 
     pub fn performance_history_comparison(&self) -> Option<PerformanceHistoryComparison> {
-        compare_history(&self.history.iter().cloned().collect::<Vec<_>>(), COMPARISON_WINDOW)
+        compare_history(
+            &self.history.iter().cloned().collect::<Vec<_>>(),
+            COMPARISON_WINDOW,
+        )
     }
 }
 
@@ -590,8 +593,14 @@ mod tests {
         assert_eq!(comparison.cpu.previous_average, 10.0);
         assert_eq!(comparison.cpu.absolute_delta, 10.0);
         assert_eq!(comparison.cpu.percentage_delta, Some(100.0));
-        assert_eq!(comparison.cpu.direction, PerformanceChangeDirection::Increased);
-        assert_eq!(comparison.storage_write_bytes_per_second.direction, PerformanceChangeDirection::Decreased);
+        assert_eq!(
+            comparison.cpu.direction,
+            PerformanceChangeDirection::Increased
+        );
+        assert_eq!(
+            comparison.storage_write_bytes_per_second.direction,
+            PerformanceChangeDirection::Decreased
+        );
     }
 
     #[test]
