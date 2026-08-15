@@ -14,7 +14,7 @@ use execution_engine::{
     execute_system_status, execute_unified_system_intelligence,
 };
 use health_status::{HealthSnapshot, PerformanceAnomalyReport, explain_performance};
-use monitoring::{Monitor, MonitorSnapshot};
+use monitoring::{Monitor, MonitorSnapshot, PerformanceHistoryComparison};
 use network_intelligence::NetworkAnalysis;
 use policy_engine::PolicyContext;
 use process_intelligence::ProcessAnalysis;
@@ -251,6 +251,19 @@ fn monitor_history(state: tauri::State<'_, AppState>) -> Result<Vec<MonitorSnaps
 }
 
 #[tauri::command]
+fn performance_history_comparison(
+    state: tauri::State<'_, AppState>,
+) -> Result<PerformanceHistoryComparison, String> {
+    let monitor = state
+        .monitor
+        .lock()
+        .map_err(|_| "monitor state unavailable".to_owned())?;
+    monitor
+        .performance_history_comparison()
+        .ok_or_else(|| "insufficient performance history for comparison".to_owned())
+}
+
+#[tauri::command]
 fn performance_anomaly_explanations(
     state: tauri::State<'_, AppState>,
 ) -> Result<PerformanceAnomalyReport, String> {
@@ -322,6 +335,7 @@ pub fn run() {
             action_remediation_suggestions,
             monitor_snapshot,
             monitor_history,
+            performance_history_comparison,
             performance_anomaly_explanations,
             process_performance_drilldown,
             health_status
