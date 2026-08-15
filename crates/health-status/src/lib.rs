@@ -6,6 +6,7 @@ use thiserror::Error;
 
 pub mod alerts;
 pub mod performance;
+pub use alerts::{AlertDecision, AlertPolicy, AlertSeverity, AlertState, alert_decision};
 pub use performance::{
     PerformanceAnomaly, PerformanceAnomalyLevel, PerformanceAnomalyReport, PerformanceMetric,
     explain as explain_performance,

@@ -13,7 +13,10 @@ use execution_engine::{
     execute_service_analysis, execute_storage_analysis, execute_storage_status,
     execute_system_status, execute_unified_system_intelligence,
 };
-use health_status::{HealthSnapshot, PerformanceAnomalyReport, explain_performance};
+use health_status::{
+    AlertDecision, AlertState, HealthLevel, HealthSnapshot, PerformanceAnomalyReport, SignalKind,
+    alert_decision, explain_performance,
+};
 use monitoring::{Monitor, MonitorSnapshot, PerformanceHistoryComparison};
 use network_intelligence::NetworkAnalysis;
 use policy_engine::PolicyContext;
@@ -312,6 +315,15 @@ fn health_status(state: tauri::State<'_, AppState>) -> Result<HealthSnapshot, St
     execute_health_status(&context(), Some(&snapshot), max_storage_usage)
         .map_err(|error| error.to_string())
 }
+#[tauri::command]
+fn alert_decision_for_signal(
+    kind: SignalKind,
+    level: HealthLevel,
+    state: AlertState,
+    now_ms: u128,
+) -> Option<AlertDecision> {
+    alert_decision(kind, level, state, now_ms)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -338,7 +350,8 @@ pub fn run() {
             performance_history_comparison,
             performance_anomaly_explanations,
             process_performance_drilldown,
-            health_status
+            health_status,
+            alert_decision_for_signal
         ])
         .run(tauri::generate_context!())
         .expect("error while running Linux Powerhouse");
