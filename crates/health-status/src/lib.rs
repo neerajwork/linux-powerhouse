@@ -4,6 +4,7 @@ use monitoring::MonitorSnapshot;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod alerts;
 pub mod performance;
 pub use performance::{
     PerformanceAnomaly, PerformanceAnomalyLevel, PerformanceAnomalyReport, PerformanceMetric,
