@@ -168,13 +168,48 @@ Acceptance goals:
 - Keep the feature local-only and read-only with no automatic system mutation.
 - Cover serialization, restoration, missing-file behavior, and persistence failures with tests.
 
+Status: **Complete**.
+
+### Step 55 — Alert History Controls
+
+Add focused, client-side controls for investigating retained alert events without changing the stored history or alert behavior.
+
+Acceptance goals:
+
+- Filter by severity: warning or critical.
+- Filter by alert category.
+- Filter by notification decision.
+- Filter by recent time period: 24 hours, 7 days, or 30 days.
+- Provide an explicit filter reset control.
+- Show filtered versus retained event counts.
+- Keep filtering presentation-only; it must not suppress, delete, or modify alerts.
+- Preserve local persistence and the bounded 100-event retention policy.
+
+Status: **Complete**.
+
+### Step 56 — Alert History Summary & Trends
+
+Turn retained alert history into a compact local summary so users can understand the shape and direction of recent alert activity without exporting data or introducing analytics services.
+
+Acceptance goals:
+
+- Show total retained events.
+- Show warning and critical event counts.
+- Show notified and suppressed event counts.
+- Identify the most frequent alert category.
+- Compare the latest 7 days with the preceding 7-day period.
+- Present a deterministic trend direction: increasing, decreasing, or stable.
+- Keep the summary derived entirely from the existing local event history.
+- Keep the summary read-only and presentation-only.
+- Do not change alert decisions, retention, persistence, or critical-event behavior.
+
 Status: **In progress**.
 
 ## Subsequent expansion areas
 
-After persistent alert history, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value rather than adding UI features mechanically. Candidate areas include:
+After alert history summary and trends, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value rather than adding UI features mechanically. Candidate areas include:
 
-1. **Alert History Controls** — filtering and focused views for severity, category, decision, and time period.
+1. **Alert History Controls expansion** — saved filters or focused views if justified by usage.
 2. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
 3. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
 4. **Resource Optimization** — explainable opportunities to reduce resource consumption.
