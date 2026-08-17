@@ -31,26 +31,47 @@ pub struct AlertEventHistory {
 }
 
 impl Default for AlertEventHistory {
-    fn default() -> Self { Self::new(DEFAULT_ALERT_HISTORY_LIMIT) }
+    fn default() -> Self {
+        Self::new(DEFAULT_ALERT_HISTORY_LIMIT)
+    }
 }
 
 impl AlertEventHistory {
-    pub fn new(limit: usize) -> Self { Self { limit, events: Vec::new() } }
-    pub fn limit(&self) -> usize { self.limit }
-    pub fn events(&self) -> &[AlertEvent] { &self.events }
-
-    pub fn record(&mut self, event: AlertEvent) {
-        if self.limit == 0 { return; }
-        self.events.push(event);
-        let excess = self.events.len().saturating_sub(self.limit);
-        if excess > 0 { self.events.drain(0..excess); }
+    pub fn new(limit: usize) -> Self {
+        Self {
+            limit,
+            events: Vec::new(),
+        }
     }
 
-    pub fn clear(&mut self) { self.events.clear(); }
+    pub fn limit(&self) -> usize {
+        self.limit
+    }
+
+    pub fn events(&self) -> &[AlertEvent] {
+        &self.events
+    }
+
+    pub fn record(&mut self, event: AlertEvent) {
+        if self.limit == 0 {
+            return;
+        }
+        self.events.push(event);
+        let excess = self.events.len().saturating_sub(self.limit);
+        if excess > 0 {
+            self.events.drain(0..excess);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.events.clear();
+    }
 }
 
 pub fn event_reason(state: AlertState, severity: AlertSeverity, now_ms: u128) -> AlertEventReason {
-    if severity == AlertSeverity::Critical { return AlertEventReason::CriticalOverride; }
+    if severity == AlertSeverity::Critical {
+        return AlertEventReason::CriticalOverride;
+    }
     match state {
         AlertState::Active => AlertEventReason::ActivePolicy,
         AlertState::Dismissed => AlertEventReason::Dismissed,
@@ -102,7 +123,9 @@ mod tests {
     #[test]
     fn history_keeps_only_the_newest_events() {
         let mut history = AlertEventHistory::new(2);
-        for timestamp_ms in 1..=3 { history.record(event(timestamp_ms)); }
+        for timestamp_ms in 1..=3 {
+            history.record(event(timestamp_ms));
+        }
         assert_eq!(history.events().len(), 2);
         assert_eq!(history.events()[0].timestamp_ms, 2);
         assert_eq!(history.events()[1].timestamp_ms, 3);
@@ -125,30 +148,72 @@ mod tests {
 
     #[test]
     fn critical_alert_records_override_reason() {
-        let event = create_event(1_000, SignalKind::Cpu, HealthLevel::Critical, 96.0, AlertState::Snoozed { until_ms: 10_000 }, AlertDecision::Notify).unwrap();
+        let event = create_event(
+            1_000,
+            SignalKind::Cpu,
+            HealthLevel::Critical,
+            96.0,
+            AlertState::Snoozed { until_ms: 10_000 },
+            AlertDecision::Notify,
+        )
+        .unwrap();
         assert_eq!(event.reason, AlertEventReason::CriticalOverride);
     }
 
     #[test]
     fn active_warning_records_notify_reason() {
-        let event = create_event(1_000, SignalKind::Memory, HealthLevel::Warning, 85.0, AlertState::Active, AlertDecision::Notify).unwrap();
+        let event = create_event(
+            1_000,
+            SignalKind::Memory,
+            HealthLevel::Warning,
+            85.0,
+            AlertState::Active,
+            AlertDecision::Notify,
+        )
+        .unwrap();
         assert_eq!(event.reason, AlertEventReason::ActivePolicy);
     }
 
     #[test]
     fn snoozed_warning_records_suppressed_reason() {
-        let event = create_event(1_000, SignalKind::Swap, HealthLevel::Warning, 25.0, AlertState::Snoozed { until_ms: 2_000 }, AlertDecision::Suppressed).unwrap();
+        let event = create_event(
+            1_000,
+            SignalKind::Swap,
+            HealthLevel::Warning,
+            25.0,
+            AlertState::Snoozed { until_ms: 2_000 },
+            AlertDecision::Suppressed,
+        )
+        .unwrap();
         assert_eq!(event.reason, AlertEventReason::Snoozed);
     }
 
     #[test]
     fn expired_snooze_records_expiry_reason() {
-        let event = create_event(2_000, SignalKind::Storage, HealthLevel::Warning, 82.0, AlertState::Snoozed { until_ms: 1_000 }, AlertDecision::Notify).unwrap();
+        let event = create_event(
+            2_000,
+            SignalKind::Storage,
+            HealthLevel::Warning,
+            82.0,
+            AlertState::Snoozed { until_ms: 1_000 },
+            AlertDecision::Notify,
+        )
+        .unwrap();
         assert_eq!(event.reason, AlertEventReason::SnoozeExpired);
     }
 
     #[test]
     fn healthy_signal_has_no_event() {
-        assert!(create_event(1_000, SignalKind::Network, HealthLevel::Healthy, 20.0, AlertState::Active, AlertDecision::Notify).is_none());
+        assert!(
+            create_event(
+                1_000,
+                SignalKind::Network,
+                HealthLevel::Healthy,
+                20.0,
+                AlertState::Active,
+                AlertDecision::Notify
+            )
+            .is_none()
+        );
     }
 }
