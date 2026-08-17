@@ -5,10 +5,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod alert_correlation;
+pub mod alert_explanation;
 pub mod alert_history;
 pub mod alerts;
 pub mod performance;
 pub use alert_correlation::{AlertPerformanceCorrelation, correlate_alert};
+pub use alert_explanation::{AlertExplanation, explain_alert};
 pub use alert_history::{
     AlertEvent, AlertEventHistory, AlertEventReason, DEFAULT_ALERT_HISTORY_LIMIT,
     create_event as create_alert_event, event_reason as alert_event_reason,
