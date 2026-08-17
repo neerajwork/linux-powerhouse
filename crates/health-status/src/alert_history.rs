@@ -221,14 +221,16 @@ mod tests {
 
     #[test]
     fn healthy_signal_has_no_event() {
-        assert!(create_event(
-            1_000,
-            SignalKind::Network,
-            HealthLevel::Healthy,
-            20.0,
-            AlertState::Active,
-            AlertDecision::Notify,
-        )
-        .is_none());
+        assert!(
+            create_event(
+                1_000,
+                SignalKind::Network,
+                HealthLevel::Healthy,
+                20.0,
+                AlertState::Active,
+                AlertDecision::Notify,
+            )
+            .is_none()
+        );
     }
 }
