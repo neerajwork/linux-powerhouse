@@ -108,29 +108,27 @@ With the safe-action foundation established, the next phase should broaden Linux
 
 Establish a unified read-only performance baseline for CPU, memory, storage I/O, and process activity, using existing monitoring/intelligence infrastructure where possible.
 
-Acceptance goals:
+Status: **Complete**.
 
-- Present current CPU, memory, storage I/O, and process activity in a consistent model.
-- Establish short-term local baselines and trends without requiring external services.
-- Identify meaningful deviations from the local baseline deterministically.
-- Reuse existing system-intelligence data instead of creating parallel collectors where practical.
-- Keep the feature read-only; no remediation or automatic action execution.
-- Expose data through the existing desktop architecture with focused, testable interfaces.
-- Preserve bounded local data and existing privacy/safety guarantees.
+### Step 49 — Performance Anomaly Explanations
 
-### Future performance-intelligence steps
+Explain why a CPU, memory, I/O, or process signal is unusual using deterministic local evidence and existing performance history.
 
-Step 48 should be treated as the foundation for a sequence of small performance-intelligence milestones rather than a large dashboard rewrite. Candidate follow-up areas include:
+Status: **Complete**.
 
-1. **Performance anomaly explanations** — explain why a CPU, memory, I/O, or process signal is unusual.
-2. **Process performance drill-down** — correlate resource usage with processes and services.
-3. **Performance history comparison** — compare current behavior with previous local periods.
-4. **Resource optimization recommendations** — suggest safe, explainable opportunities without automatically changing the system.
-5. **Cross-subsystem performance correlation** — connect CPU, memory, I/O, network, and service signals into higher-level narratives.
+### Step 50 — Process Performance Drill-down
 
-These remain candidate areas until each is defined as a focused roadmap step.
+Correlate resource anomalies with processes and services while remaining read-only and locally processed.
 
-## Step 52 — Alert Controls and Notification Snoozing
+Status: **Complete**.
+
+### Step 51 — Performance History Comparison
+
+Compare current performance behavior with previous local periods to make deviations more understandable.
+
+Status: **Complete**.
+
+### Step 52 — Alert Controls and Notification Snoozing
 
 Add deterministic controls for routine warning notifications while preserving critical-event visibility.
 
@@ -141,32 +139,48 @@ Status: **Complete**.
 - Deterministic alert decisions exposed through Tauri.
 - Critical events remain notification-eligible regardless of routine warning preferences.
 
-## Step 53 — Alert Event History & Audit
+### Step 53 — Alert Event History & Audit
 
 Make alert decisions observable and auditable without changing the local-first, read-only safety model.
 
-Acceptance goals:
+Status: **Complete**.
 
 - Record alert category, severity, signal value, timestamp, decision, and reason.
 - Keep alert history bounded to a deterministic local limit.
 - Preserve critical-event records even when routine warnings are snoozed or dismissed.
 - Expose history and explicit clear-history controls through Tauri.
 - Provide a focused Desktop Alert History view.
-- Keep history local and in-memory; no external service or automatic remediation.
+- Keep the initial history bounded and local with explicit reset behavior.
 - Cover retention, clearing, snooze, dismissal, expiry, and critical override behavior with tests.
+
+### Step 54 — Persistent Alert History
+
+Persist the bounded alert-event history locally so users retain an auditable record across application restarts without introducing an external service or automatic remediation.
+
+Acceptance goals:
+
+- Store alert history in the application's local data directory.
+- Restore the bounded history when Linux Powerhouse starts.
+- Preserve the existing 100-event retention limit.
+- Persist explicit clear-history operations.
+- Use atomic replacement when writing the local history file to reduce the risk of partial writes.
+- Gracefully fall back to an empty bounded history when the history file is missing or unreadable.
+- Keep the feature local-only and read-only with no automatic system mutation.
+- Cover serialization, restoration, missing-file behavior, and persistence failures with tests.
 
 Status: **In progress**.
 
 ## Subsequent expansion areas
 
-After performance intelligence, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value rather than adding UI features mechanically. Candidate areas include:
+After persistent alert history, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value rather than adding UI features mechanically. Candidate areas include:
 
-1. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
-2. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
-3. **Resource Optimization** — explainable opportunities to reduce resource consumption.
-4. **Automation** — carefully bounded recurring local workflows built on the action/audit foundation.
-5. **Cross-subsystem Correlation** — connect related signals into higher-level system narratives.
-6. **Linux Tool Ecosystem** — selectively expose mature command-line utilities through the capability-oriented Tool Registry.
+1. **Alert History Controls** — filtering and focused views for severity, category, decision, and time period.
+2. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
+3. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
+4. **Resource Optimization** — explainable opportunities to reduce resource consumption.
+5. **Automation** — carefully bounded recurring local workflows built on the action/audit foundation.
+6. **Cross-subsystem Correlation** — connect related signals into higher-level system narratives.
+7. **Linux Tool Ecosystem** — selectively expose mature command-line utilities through the capability-oriented Tool Registry.
 
 These are candidates, not committed step numbers. Each should be broken into small roadmap steps after requirements and safety boundaries are defined.
 
@@ -178,7 +192,7 @@ A roadmap step is complete only when:
 2. The commit message clearly identifies the feature.
 3. Rust CI is green for the feature commit.
 4. Desktop CI is green for the feature commit.
-5. A focused PR is reviewed and squash-merged.
+5. A focused PR is reviewed and merged.
 6. Post-merge Rust and Desktop CI are green.
 7. The roadmap is updated when the milestone materially changes project direction.
 
