@@ -160,10 +160,7 @@ Status: **Complete**.
 - Keep correlation local, read-only, bounded, and independent of remediation.
 
 ### Step 59 — Alert Explanations
-
-Turn alert decisions and their available evidence into a concise human-readable explanation of **why the alert happened and how it was handled**, without changing alert behavior.
-
-Acceptance goals:
+Status: **Complete**.
 
 - Explain the signal, observed value, severity, decision, and policy reason in plain language.
 - Distinguish notified versus suppressed routine warnings.
@@ -173,11 +170,25 @@ Acceptance goals:
 - Keep explanations local, deterministic, read-only, and presentation-only.
 - Do not trigger remediation or alter stored alert history.
 
+### Step 60 — Alert Evidence View
+
+Turn the Step 58 correlation and Step 59 explanation into an inspectable evidence view so users can see the underlying performance context alongside the human-readable explanation.
+
+Acceptance goals:
+
+- Show the nearest correlated monitoring snapshot for an alert when it falls within the existing 30-second window.
+- Show signal-specific primary evidence for CPU, memory, swap, storage, and network alerts.
+- Surface supporting context including memory, swap, process count, and running-process count.
+- Show the age of the correlated snapshot relative to the alert context.
+- Gracefully explain when no matching performance snapshot is available.
+- Keep the evidence view local, deterministic, read-only, and presentation-only.
+- Do not change alert decisions, persistence, retention, or remediation behavior.
+
 Status: **In progress**.
 
 ## Subsequent expansion areas
 
-After deterministic alert explanations, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
+After deterministic alert evidence views, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
 
 1. **Cross-subsystem Alert Correlation** — connect alert categories with deeper performance, process, service, and network evidence.
 2. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
