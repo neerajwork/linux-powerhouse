@@ -21,7 +21,10 @@ pub struct AlertPerformanceCorrelation {
     pub primary_evidence: String,
 }
 
-pub fn correlate_alert(event: &AlertEvent, snapshots: &[MonitorSnapshot]) -> Option<AlertPerformanceCorrelation> {
+pub fn correlate_alert(
+    event: &AlertEvent,
+    snapshots: &[MonitorSnapshot],
+) -> Option<AlertPerformanceCorrelation> {
     let performance_timestamp = event.performance_timestamp_ms?;
     let snapshot = snapshots
         .iter()
@@ -51,11 +54,26 @@ pub fn correlate_alert(event: &AlertEvent, snapshots: &[MonitorSnapshot]) -> Opt
 
 fn primary_evidence(signal: SignalKind, snapshot: &MonitorSnapshot) -> String {
     match signal {
-        SignalKind::Cpu => format!("CPU utilization was {:.1}% near the alert.", snapshot.cpu_percent),
-        SignalKind::Memory => format!("Memory utilization was {:.1}% near the alert.", snapshot.memory_percent),
-        SignalKind::Swap => format!("Swap utilization was {:.1}% near the alert.", snapshot.swap_percent),
-        SignalKind::Storage => format!("Storage I/O was {:.1} read / {:.1} write bytes/s near the alert.", snapshot.storage_read_bytes_per_second, snapshot.storage_write_bytes_per_second),
-        SignalKind::Network => format!("Network activity was sampled across {} interfaces near the alert.", snapshot.network.len()),
+        SignalKind::Cpu => format!(
+            "CPU utilization was {:.1}% near the alert.",
+            snapshot.cpu_percent
+        ),
+        SignalKind::Memory => format!(
+            "Memory utilization was {:.1}% near the alert.",
+            snapshot.memory_percent
+        ),
+        SignalKind::Swap => format!(
+            "Swap utilization was {:.1}% near the alert.",
+            snapshot.swap_percent
+        ),
+        SignalKind::Storage => format!(
+            "Storage I/O was {:.1} read / {:.1} write bytes/s near the alert.",
+            snapshot.storage_read_bytes_per_second, snapshot.storage_write_bytes_per_second
+        ),
+        SignalKind::Network => format!(
+            "Network activity was sampled across {} interfaces near the alert.",
+            snapshot.network.len()
+        ),
     }
 }
 
@@ -94,7 +112,11 @@ mod tests {
 
     #[test]
     fn selects_nearest_snapshot_within_window() {
-        let result = correlate_alert(&event(100_000, Some(10_000)), &[snapshot(9_000), snapshot(10_100)]).unwrap();
+        let result = correlate_alert(
+            &event(100_000, Some(10_000)),
+            &[snapshot(9_000), snapshot(10_100)],
+        )
+        .unwrap();
         assert_eq!(result.snapshot_timestamp_ms, 10_100);
         assert_eq!(result.age_ms, 100);
         assert_eq!(result.signal, SignalKind::Cpu);
@@ -103,7 +125,9 @@ mod tests {
 
     #[test]
     fn ignores_snapshots_outside_window() {
-        assert!(correlate_alert(&event(100_000, Some(10_000)), &[snapshot(40_001)]).is_none());
+        assert!(
+            correlate_alert(&event(100_000, Some(10_000)), &[snapshot(40_001)]).is_none()
+        );
     }
 
     #[test]
