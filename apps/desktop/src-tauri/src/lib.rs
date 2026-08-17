@@ -1,11 +1,14 @@
 mod action_audit;
 mod action_remediation;
 mod action_verification;
+mod alert_history_store;
 
 use action_audit::{ActionAudit, ActionAuditEntry};
 use action_remediation::{RemediationSuggestion, suggest_remediation};
 use action_verification::verify_safe_action;
+use std::path::PathBuf;
 use std::sync::Mutex;
+use tauri::Manager;
 
 use execution_engine::{
     execute_health_status, execute_monitoring_snapshot, execute_network_analysis,
@@ -29,6 +32,7 @@ struct AppState {
     monitor: Mutex<Monitor>,
     audit: ActionAudit,
     alert_history: Mutex<AlertEventHistory>,
+    alert_history_path: Mutex<Option<PathBuf>>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -60,6 +64,21 @@ fn user_confirmed_context() -> PolicyContext {
         ai_requested: false,
         user_confirmed: true,
     }
+}
+
+fn persist_alert_history(state: &AppState) -> Result<(), String> {
+    let path = state
+        .alert_history_path
+        .lock()
+        .map_err(|_| "alert history path unavailable".to_owned())?
+        .clone()
+        .ok_or_else(|| "alert history persistence is not initialized".to_owned())?;
+    let history = state
+        .alert_history
+        .lock()
+        .map_err(|_| "alert history unavailable".to_owned())?
+        .clone();
+    alert_history_store::save(&path, &history)
 }
 
 #[tauri::command]
@@ -335,6 +354,7 @@ fn alert_decision_for_signal(
                 .lock()
                 .map_err(|_| "alert history unavailable".to_owned())?
                 .record(event);
+            persist_alert_history(&app_state)?;
         }
 
         Ok(Some(decision))
@@ -360,7 +380,7 @@ fn clear_alert_event_history(state: tauri::State<'_, AppState>) -> Result<(), St
         .lock()
         .map_err(|_| "alert history unavailable".to_owned())?
         .clear();
-    Ok(())
+    persist_alert_history(&state)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -370,6 +390,27 @@ pub fn run() {
             monitor: Mutex::new(Monitor::new()),
             audit: ActionAudit,
             alert_history: Mutex::new(AlertEventHistory::default()),
+            alert_history_path: Mutex::new(None),
+        })
+        .setup(|app| {
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .map_err(|error| std::io::Error::other(error.to_string()))?;
+            std::fs::create_dir_all(&app_data_dir)?;
+            let history_path = alert_history_store::path(&app_data_dir);
+            let history = alert_history_store::load(&history_path);
+            let state = app.state::<AppState>();
+            *state
+                .alert_history
+                .lock()
+                .map_err(|_| std::io::Error::other("alert history unavailable"))? = history;
+            *state
+                .alert_history_path
+                .lock()
+                .map_err(|_| std::io::Error::other("alert history path unavailable"))? =
+                Some(history_path);
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             system_status,

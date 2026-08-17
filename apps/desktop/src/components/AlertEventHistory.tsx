@@ -69,7 +69,7 @@ export function AlertEventHistory() {
           <p className="eyebrow">ALERT HISTORY</p>
           <h2 id="alert-history-title">Alert event history</h2>
           <p className="subtitle">
-            A bounded local record of warning and critical alert decisions.
+            A bounded local record of warning and critical alert decisions that survives application restarts.
           </p>
         </div>
         <button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>
@@ -104,7 +104,7 @@ export function AlertEventHistory() {
       )}
 
       <small className="monitor-note">
-        History is retained locally in memory and is bounded to the latest 100 events. Critical events are never suppressed by alert preferences.
+        History is retained locally, survives application restarts, and is bounded to the latest 100 events. Critical events are never suppressed by alert preferences.
       </small>
     </section>
   );
