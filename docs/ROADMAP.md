@@ -143,26 +143,43 @@ Status: **Complete**.
 - Present deterministic increasing/decreasing/stable activity direction.
 
 ### Step 57 — Alert History Insights
-
-Turn the summary into a compact set of deterministic observations about what deserves attention now, without changing alerts or introducing external analytics.
-
-Acceptance goals:
+Status: **Complete**.
 
 - Identify the alert category with the largest recent change versus the preceding 7 days.
 - Report whether critical events are increasing, decreasing, or stable.
 - Report whether suppressed events are increasing, decreasing, or stable.
 - Provide a concise primary attention signal based on retained local history.
 - Keep insights deterministic, local, read-only, and presentation-only.
-- Do not change alert decisions, stored history, retention, persistence, or critical-event behavior.
-- Work correctly with empty and sparse histories.
+
+### Step 58 — Alert ↔ Performance Correlation
+Status: **Complete**.
+
+- Correlate an alert with the nearest monitoring snapshot within a bounded 30-second window.
+- Preserve CPU, memory, swap, storage I/O, process-count, and running-process context.
+- Produce deterministic primary evidence for the correlated signal.
+- Keep correlation local, read-only, bounded, and independent of remediation.
+
+### Step 59 — Alert Explanations
+
+Turn alert decisions and their available evidence into a concise human-readable explanation of **why the alert happened and how it was handled**, without changing alert behavior.
+
+Acceptance goals:
+
+- Explain the signal, observed value, severity, decision, and policy reason in plain language.
+- Distinguish notified versus suppressed routine warnings.
+- Preserve an explicit critical-event override explanation.
+- Explain snoozed, dismissed, expired, and active-policy outcomes deterministically.
+- Surface explanations directly in the Desktop Alert History view.
+- Keep explanations local, deterministic, read-only, and presentation-only.
+- Do not trigger remediation or alter stored alert history.
 
 Status: **In progress**.
 
 ## Subsequent expansion areas
 
-After deterministic alert history insights, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
+After deterministic alert explanations, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
 
-1. **Cross-subsystem Alert Correlation** — connect alert categories with performance, process, service, and network evidence.
+1. **Cross-subsystem Alert Correlation** — connect alert categories with deeper performance, process, service, and network evidence.
 2. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
 3. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
 4. **Resource Optimization** — explainable opportunities to reduce resource consumption.
