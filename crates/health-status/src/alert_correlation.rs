@@ -125,9 +125,7 @@ mod tests {
 
     #[test]
     fn ignores_snapshots_outside_window() {
-        assert!(
-            correlate_alert(&event(100_000, Some(10_000)), &[snapshot(40_001)]).is_none()
-        );
+        assert!(correlate_alert(&event(100_000, Some(10_000)), &[snapshot(40_001)]).is_none());
     }
 
     #[test]
