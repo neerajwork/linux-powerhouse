@@ -329,9 +329,7 @@ fn alert_decision_for_signal(
     let decision = alert_decision(kind, level, state, now_ms);
 
     if let Some(decision) = decision {
-        if let Some(event) = create_alert_event(
-            now_ms, kind, level, value, state, decision,
-        ) {
+        if let Some(event) = create_alert_event(now_ms, kind, level, value, state, decision) {
             app_state
                 .alert_history
                 .lock()
@@ -346,9 +344,7 @@ fn alert_decision_for_signal(
 }
 
 #[tauri::command]
-fn alert_event_history(
-    state: tauri::State<'_, AppState>,
-) -> Result<Vec<AlertEvent>, String> {
+fn alert_event_history(state: tauri::State<'_, AppState>) -> Result<Vec<AlertEvent>, String> {
     Ok(state
         .alert_history
         .lock()
