@@ -4,8 +4,13 @@ use monitoring::MonitorSnapshot;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod alert_history;
 pub mod alerts;
 pub mod performance;
+pub use alert_history::{
+    create_event as create_alert_event, event_reason as alert_event_reason, AlertEvent,
+    AlertEventHistory, AlertEventReason, DEFAULT_ALERT_HISTORY_LIMIT,
+};
 pub use alerts::{AlertDecision, AlertPolicy, AlertSeverity, AlertState, alert_decision};
 pub use performance::{
     PerformanceAnomaly, PerformanceAnomalyLevel, PerformanceAnomalyReport, PerformanceMetric,
