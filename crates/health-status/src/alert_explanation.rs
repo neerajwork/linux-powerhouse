@@ -1,4 +1,7 @@
-use crate::{AlertDecision, AlertEvent, AlertEventReason, AlertPerformanceCorrelation, AlertSeverity, SignalKind};
+use crate::{
+    AlertDecision, AlertEvent, AlertEventReason, AlertPerformanceCorrelation, AlertSeverity,
+    SignalKind,
+};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -33,7 +36,9 @@ pub fn explain_alert(
 
     let evidence = correlation
         .map(|item| item.primary_evidence.clone())
-        .unwrap_or_else(|| "No matching performance snapshot was available for this alert.".to_owned());
+        .unwrap_or_else(|| {
+            "No matching performance snapshot was available for this alert.".to_owned()
+        });
 
     let action = match event.reason {
         AlertEventReason::CriticalOverride =>
