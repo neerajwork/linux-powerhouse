@@ -130,6 +130,33 @@ Step 48 should be treated as the foundation for a sequence of small performance-
 
 These remain candidate areas until each is defined as a focused roadmap step.
 
+## Step 52 — Alert Controls and Notification Snoozing
+
+Add deterministic controls for routine warning notifications while preserving critical-event visibility.
+
+Status: **Complete**.
+
+- Local snooze preferences with 7, 14, and 30-day options.
+- Local dismissal and restore controls.
+- Deterministic alert decisions exposed through Tauri.
+- Critical events remain notification-eligible regardless of routine warning preferences.
+
+## Step 53 — Alert Event History & Audit
+
+Make alert decisions observable and auditable without changing the local-first, read-only safety model.
+
+Acceptance goals:
+
+- Record alert category, severity, signal value, timestamp, decision, and reason.
+- Keep alert history bounded to a deterministic local limit.
+- Preserve critical-event records even when routine warnings are snoozed or dismissed.
+- Expose history and explicit clear-history controls through Tauri.
+- Provide a focused Desktop Alert History view.
+- Keep history local and in-memory; no external service or automatic remediation.
+- Cover retention, clearing, snooze, dismissal, expiry, and critical override behavior with tests.
+
+Status: **In progress**.
+
 ## Subsequent expansion areas
 
 After performance intelligence, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value rather than adding UI features mechanically. Candidate areas include:
