@@ -22,10 +22,11 @@ pub struct AlertPerformanceCorrelation {
 }
 
 pub fn correlate_alert(event: &AlertEvent, snapshots: &[MonitorSnapshot]) -> Option<AlertPerformanceCorrelation> {
+    let performance_timestamp = event.performance_timestamp_ms?;
     let snapshot = snapshots
         .iter()
         .filter_map(|snapshot| {
-            let age_ms = snapshot.timestamp_ms.abs_diff(event.timestamp_ms);
+            let age_ms = snapshot.timestamp_ms.abs_diff(performance_timestamp);
             (age_ms <= CORRELATION_WINDOW_MS).then_some((age_ms, snapshot))
         })
         .min_by_key(|(age_ms, _)| *age_ms)
@@ -34,7 +35,7 @@ pub fn correlate_alert(event: &AlertEvent, snapshots: &[MonitorSnapshot]) -> Opt
     Some(AlertPerformanceCorrelation {
         alert_timestamp_ms: event.timestamp_ms,
         snapshot_timestamp_ms: snapshot.timestamp_ms,
-        age_ms: snapshot.timestamp_ms.abs_diff(event.timestamp_ms),
+        age_ms: snapshot.timestamp_ms.abs_diff(performance_timestamp),
         signal: event.kind,
         alert_value: event.value,
         cpu_percent: snapshot.cpu_percent,
@@ -79,9 +80,10 @@ mod tests {
         }
     }
 
-    fn event(timestamp_ms: u128) -> AlertEvent {
+    fn event(timestamp_ms: u128, performance_timestamp_ms: Option<u128>) -> AlertEvent {
         AlertEvent {
             timestamp_ms,
+            performance_timestamp_ms,
             kind: SignalKind::Cpu,
             severity: AlertSeverity::Warning,
             value: 90.0,
@@ -92,7 +94,7 @@ mod tests {
 
     #[test]
     fn selects_nearest_snapshot_within_window() {
-        let result = correlate_alert(&event(10_000), &[snapshot(9_000), snapshot(10_100)]).unwrap();
+        let result = correlate_alert(&event(100_000, Some(10_000)), &[snapshot(9_000), snapshot(10_100)]).unwrap();
         assert_eq!(result.snapshot_timestamp_ms, 10_100);
         assert_eq!(result.age_ms, 100);
         assert_eq!(result.signal, SignalKind::Cpu);
@@ -101,6 +103,11 @@ mod tests {
 
     #[test]
     fn ignores_snapshots_outside_window() {
-        assert!(correlate_alert(&event(10_000), &[snapshot(40_001)]).is_none());
+        assert!(correlate_alert(&event(100_000, Some(10_000)), &[snapshot(40_001)]).is_none());
+    }
+
+    #[test]
+    fn requires_performance_timestamp() {
+        assert!(correlate_alert(&event(100_000, None), &[snapshot(10_000)]).is_none());
     }
 }
