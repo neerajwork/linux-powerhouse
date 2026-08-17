@@ -8,7 +8,7 @@ pub mod alert_correlation;
 pub mod alert_history;
 pub mod alerts;
 pub mod performance;
-pub use alert_correlation::{correlate_alert, AlertPerformanceCorrelation};
+pub use alert_correlation::{AlertPerformanceCorrelation, correlate_alert};
 pub use alert_history::{
     AlertEvent, AlertEventHistory, AlertEventReason, DEFAULT_ALERT_HISTORY_LIMIT,
     create_event as create_alert_event, event_reason as alert_event_reason,
