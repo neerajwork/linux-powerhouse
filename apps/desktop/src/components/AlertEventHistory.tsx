@@ -29,6 +29,35 @@ const reasonLabel = (reason: AlertEvent["reason"]): string => {
   }
 };
 
+const explanation = (event: AlertEvent): { headline: string; detail: string; action: string } => {
+  const label = categoryLabel(event.kind);
+  const headline = event.severity === "Critical" ? `Critical ${label} alert` : `${label} warning alert`;
+  const detail = event.decision === "Notify"
+    ? `${label} reached ${event.value.toFixed(1)}%, so the active alert policy notified you.`
+    : `${label} reached ${event.value.toFixed(1)}%, but the routine warning was suppressed by the current alert policy.`;
+
+  let action: string;
+  switch (event.reason) {
+    case "CriticalOverride":
+      action = "Critical events remain visible regardless of routine warning preferences.";
+      break;
+    case "Snoozed":
+      action = "The routine warning was snoozed; review the event if the underlying condition persists.";
+      break;
+    case "Dismissed":
+      action = "The routine warning was dismissed; review the history if the condition returns.";
+      break;
+    case "SnoozeExpired":
+      action = "The snooze period had expired, so the routine warning returned to the active policy.";
+      break;
+    case "ActivePolicy":
+      action = "The active alert policy determined how this event was handled.";
+      break;
+  }
+
+  return { headline, detail, action };
+};
+
 export function AlertEventHistory() {
   const [events, setEvents] = useState<AlertEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +109,7 @@ export function AlertEventHistory() {
         <div>
           <p className="eyebrow">ALERT HISTORY</p>
           <h2 id="alert-history-title">Alert event history</h2>
-          <p className="subtitle">Review warning and critical decisions with focused local filters.</p>
+          <p className="subtitle">Review warning and critical decisions with focused local filters and deterministic explanations.</p>
         </div>
         <button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>Clear history</button>
       </div>
@@ -98,8 +127,28 @@ export function AlertEventHistory() {
 
       {error && <div className="error">Unable to read alert history: {error}</div>}
       {!filteredEvents.length && !error && <article className="card"><strong>{events.length ? "No matching alert events." : "No alert events recorded yet."}</strong><span>{events.length ? "Adjust or reset the filters to broaden the history view." : "New warning and critical decisions will appear here."}</span></article>}
-      {!!filteredEvents.length && <div className="list alert-history__list">{[...filteredEvents].reverse().map((event, index) => <article className="row" key={`${event.timestamp_ms}-${event.kind}-${index}`}><div><strong>{categoryLabel(event.kind)} · {event.severity}</strong><span>{new Date(event.timestamp_ms).toLocaleString()} · {event.value.toFixed(1)}%</span><small>{reasonLabel(event.reason)}</small></div><b>{event.decision === "Notify" ? "Notified" : "Suppressed"}</b></article>)}</div>}
-      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering only changes the view; history remains local, persistent, and bounded to the latest 100 events.</small>
+      {!!filteredEvents.length && <div className="list alert-history__list">{[...filteredEvents].reverse().map((event, index) => {
+        const why = explanation(event);
+        return (
+          <article className="row" key={`${event.timestamp_ms}-${event.kind}-${index}`}>
+            <div>
+              <strong>{categoryLabel(event.kind)} · {event.severity}</strong>
+              <span>{new Date(event.timestamp_ms).toLocaleString()} · {event.value.toFixed(1)}%</span>
+              <small>{reasonLabel(event.reason)}</small>
+              <details>
+                <summary>Why did this alert happen?</summary>
+                <div className="alert-history__explanation">
+                  <strong>{why.headline}</strong>
+                  <span>{why.detail}</span>
+                  <small>{why.action}</small>
+                </div>
+              </details>
+            </div>
+            <b>{event.decision === "Notify" ? "Notified" : "Suppressed"}</b>
+          </article>
+        );
+      })}</div>}
+      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering and explanations only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
     </section>
   );
 }
