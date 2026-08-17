@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { AlertHistoryInsights } from "./AlertHistoryInsights";
 import { AlertHistorySummary } from "./AlertHistorySummary";
 
 type AlertEvent = {
@@ -85,6 +86,7 @@ export function AlertEventHistory() {
       </div>
 
       <AlertHistorySummary events={events} />
+      <AlertHistoryInsights events={events} />
 
       <div className="alert-history__filters" aria-label="Alert history filters">
         <label>Severity<select value={severity} onChange={(event) => setSeverity(event.target.value as SeverityFilter)}><option value="All">All</option><option value="Warning">Warning</option><option value="Critical">Critical</option></select></label>
