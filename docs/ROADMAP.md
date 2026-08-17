@@ -37,8 +37,6 @@ The repository's historical PRs and branch names recover the roadmap from **Step
 | 15 | Service Intelligence | Complete |
 | 16 | Unified System Intelligence | Complete |
 
-> Step 15 had multiple intermediate `v2`–`v12` branches during development. These were implementation iterations, not separate roadmap milestones; the merged service-intelligence PR is the canonical Step 15 milestone.
-
 ### Steps 17–21 — Desktop Health and Persistent History
 
 | Step | Milestone | Status |
@@ -76,11 +74,7 @@ The repository's historical PRs and branch names recover the roadmap from **Step
 | 37 | Health Insight Grouping | Complete |
 | 38 | Health Insight Presets | Complete |
 
-The Health Insights Explorer now supports local history, filtering, persistence, search, sorting, grouping, reusable built-in/custom presets, export, sharing, summaries, explanations, comparisons, and subsystem drill-down.
-
-## Steps 39–47 — Safe System Intelligence Actions
-
-The project then moved from **understanding system health** toward **helping the user decide and act**, while preserving the safety boundary that AI and recommendations do not receive unrestricted system access.
+### Steps 39–47 — Safe System Intelligence Actions
 
 | Step | Milestone | Status |
 | --- | --- | --- |
@@ -94,44 +88,21 @@ The project then moved from **understanding system health** toward **helping the
 | 46 | Action Execution Outcome | Complete |
 | 47 | Safe Follow-up Execution | Complete |
 
-### Steps 43–47 — Execution Confidence and Guided Follow-up
-
-The safe-action foundation was subsequently extended with deterministic outcome verification, remediation guidance, a unified action workspace, explicit outcome presentation, and confirmation-gated follow-up execution.
-
-These steps preserve the same safety model: recommendations remain informational until the user explicitly approves an action; execution remains constrained to registered safe actions; outcomes are recorded and presented; and follow-up execution requires explicit confirmation.
-
-## Next roadmap area — System Performance Intelligence
-
-With the safe-action foundation established, the next phase should broaden Linux Powerhouse from health interpretation and remediation into deeper **system performance intelligence**. The next milestone should remain small, read-only, locally processed, and independently verifiable.
+## System Performance Intelligence
 
 ### Step 48 — Performance Baseline and Trends
-
-Establish a unified read-only performance baseline for CPU, memory, storage I/O, and process activity, using existing monitoring/intelligence infrastructure where possible.
-
 Status: **Complete**.
 
 ### Step 49 — Performance Anomaly Explanations
-
-Explain why a CPU, memory, I/O, or process signal is unusual using deterministic local evidence and existing performance history.
-
 Status: **Complete**.
 
 ### Step 50 — Process Performance Drill-down
-
-Correlate resource anomalies with processes and services while remaining read-only and locally processed.
-
 Status: **Complete**.
 
 ### Step 51 — Performance History Comparison
-
-Compare current performance behavior with previous local periods to make deviations more understandable.
-
 Status: **Complete**.
 
 ### Step 52 — Alert Controls and Notification Snoozing
-
-Add deterministic controls for routine warning notifications while preserving critical-event visibility.
-
 Status: **Complete**.
 
 - Local snooze preferences with 7, 14, and 30-day options.
@@ -140,9 +111,6 @@ Status: **Complete**.
 - Critical events remain notification-eligible regardless of routine warning preferences.
 
 ### Step 53 — Alert Event History & Audit
-
-Make alert decisions observable and auditable without changing the local-first, read-only safety model.
-
 Status: **Complete**.
 
 - Record alert category, severity, signal value, timestamp, decision, and reason.
@@ -150,72 +118,56 @@ Status: **Complete**.
 - Preserve critical-event records even when routine warnings are snoozed or dismissed.
 - Expose history and explicit clear-history controls through Tauri.
 - Provide a focused Desktop Alert History view.
-- Keep the initial history bounded and local with explicit reset behavior.
-- Cover retention, clearing, snooze, dismissal, expiry, and critical override behavior with tests.
 
 ### Step 54 — Persistent Alert History
-
-Persist the bounded alert-event history locally so users retain an auditable record across application restarts without introducing an external service or automatic remediation.
-
-Acceptance goals:
-
-- Store alert history in the application's local data directory.
-- Restore the bounded history when Linux Powerhouse starts.
-- Preserve the existing 100-event retention limit.
-- Persist explicit clear-history operations.
-- Use atomic replacement when writing the local history file to reduce the risk of partial writes.
-- Gracefully fall back to an empty bounded history when the history file is missing or unreadable.
-- Keep the feature local-only and read-only with no automatic system mutation.
-- Cover serialization, restoration, missing-file behavior, and persistence failures with tests.
-
 Status: **Complete**.
+
+- Store and restore bounded history in the local application data directory.
+- Preserve the 100-event retention limit.
+- Persist clear-history operations using atomic replacement.
+- Gracefully recover from missing or unreadable history files.
 
 ### Step 55 — Alert History Controls
-
-Add focused, client-side controls for investigating retained alert events without changing the stored history or alert behavior.
-
-Acceptance goals:
-
-- Filter by severity: warning or critical.
-- Filter by alert category.
-- Filter by notification decision.
-- Filter by recent time period: 24 hours, 7 days, or 30 days.
-- Provide an explicit filter reset control.
-- Show filtered versus retained event counts.
-- Keep filtering presentation-only; it must not suppress, delete, or modify alerts.
-- Preserve local persistence and the bounded 100-event retention policy.
-
 Status: **Complete**.
 
-### Step 56 — Alert History Summary & Trends
+- Filter by severity, category, notification decision, and recent time period.
+- Reset filters and show filtered-versus-retained counts.
+- Keep filtering presentation-only and preserve local persistence.
 
-Turn retained alert history into a compact local summary so users can understand the shape and direction of recent alert activity without exporting data or introducing analytics services.
+### Step 56 — Alert History Summary & Trends
+Status: **Complete**.
+
+- Show retained event totals and warning/critical/notified/suppressed counts.
+- Identify the most frequent alert category.
+- Compare the latest 7 days with the preceding 7 days.
+- Present deterministic increasing/decreasing/stable activity direction.
+
+### Step 57 — Alert History Insights
+
+Turn the summary into a compact set of deterministic observations about what deserves attention now, without changing alerts or introducing external analytics.
 
 Acceptance goals:
 
-- Show total retained events.
-- Show warning and critical event counts.
-- Show notified and suppressed event counts.
-- Identify the most frequent alert category.
-- Compare the latest 7 days with the preceding 7-day period.
-- Present a deterministic trend direction: increasing, decreasing, or stable.
-- Keep the summary derived entirely from the existing local event history.
-- Keep the summary read-only and presentation-only.
-- Do not change alert decisions, retention, persistence, or critical-event behavior.
+- Identify the alert category with the largest recent change versus the preceding 7 days.
+- Report whether critical events are increasing, decreasing, or stable.
+- Report whether suppressed events are increasing, decreasing, or stable.
+- Provide a concise primary attention signal based on retained local history.
+- Keep insights deterministic, local, read-only, and presentation-only.
+- Do not change alert decisions, stored history, retention, persistence, or critical-event behavior.
+- Work correctly with empty and sparse histories.
 
 Status: **In progress**.
 
 ## Subsequent expansion areas
 
-After alert history summary and trends, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value rather than adding UI features mechanically. Candidate areas include:
+After deterministic alert history insights, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
 
-1. **Alert History Controls expansion** — saved filters or focused views if justified by usage.
+1. **Cross-subsystem Alert Correlation** — connect alert categories with performance, process, service, and network evidence.
 2. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
 3. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
 4. **Resource Optimization** — explainable opportunities to reduce resource consumption.
 5. **Automation** — carefully bounded recurring local workflows built on the action/audit foundation.
-6. **Cross-subsystem Correlation** — connect related signals into higher-level system narratives.
-7. **Linux Tool Ecosystem** — selectively expose mature command-line utilities through the capability-oriented Tool Registry.
+6. **Linux Tool Ecosystem** — selectively expose mature command-line utilities through the capability-oriented Tool Registry.
 
 These are candidates, not committed step numbers. Each should be broken into small roadmap steps after requirements and safety boundaries are defined.
 
