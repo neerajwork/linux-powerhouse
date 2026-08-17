@@ -4,9 +4,11 @@ use monitoring::MonitorSnapshot;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod alert_correlation;
 pub mod alert_history;
 pub mod alerts;
 pub mod performance;
+pub use alert_correlation::{correlate_alert, AlertPerformanceCorrelation};
 pub use alert_history::{
     AlertEvent, AlertEventHistory, AlertEventReason, DEFAULT_ALERT_HISTORY_LIMIT,
     create_event as create_alert_event, event_reason as alert_event_reason,
@@ -128,19 +130,10 @@ fn threshold_signal(
     };
     let message = match level {
         HealthLevel::Healthy => format!("{label} is within the healthy range."),
-        HealthLevel::Warning => {
-            format!("{label} is elevated at {value:.1}%.")
-        }
-        HealthLevel::Critical => {
-            format!("{label} is critically high at {value:.1}%.")
-        }
+        HealthLevel::Warning => format!("{label} is elevated at {value:.1}%.")
+        HealthLevel::Critical => format!("{label} is critically high at {value:.1}%."),
     };
-    HealthSignal {
-        kind,
-        level,
-        value,
-        message,
-    }
+    HealthSignal { kind, level, value, message }
 }
 
 fn level_rank(level: &HealthLevel) -> u8 {
@@ -162,11 +155,7 @@ mod tests {
             cpu_percent: cpu,
             memory_percent: memory,
             swap_percent: swap,
-            network: vec![NetworkRate {
-                name: "lo".into(),
-                rx_bytes_per_second: 0.0,
-                tx_bytes_per_second: 0.0,
-            }],
+            network: vec![NetworkRate { name: "lo".into(), rx_bytes_per_second: 0.0, tx_bytes_per_second: 0.0 }],
             storage_read_bytes_per_second: 0.0,
             storage_write_bytes_per_second: 0.0,
             process_count: 0,
@@ -196,9 +185,6 @@ mod tests {
 
     #[test]
     fn missing_monitoring_snapshot_is_an_error() {
-        assert!(matches!(
-            evaluate(None, None),
-            Err(HealthStatusError::NoSnapshot)
-        ));
+        assert!(matches!(evaluate(None, None), Err(HealthStatusError::NoSnapshot)));
     }
 }
