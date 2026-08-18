@@ -85,6 +85,7 @@ mod tests {
             value: 91.5,
             decision,
             reason,
+            process_evidence: Vec::new(),
         }
     }
 
