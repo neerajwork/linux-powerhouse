@@ -1,7 +1,11 @@
 use super::{AlertDecision, AlertSeverity, AlertState, HealthLevel, SignalKind};
 use serde::{Deserialize, Serialize};
+use std::{fs, path::Path};
 
 pub const DEFAULT_ALERT_HISTORY_LIMIT: usize = 100;
+const PROCESS_EVIDENCE_LIMIT: usize = 5;
+const PROC: &str = "/proc";
+const MEM_INFO: &str = "/proc/meminfo";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AlertEventReason { ActivePolicy, Snoozed, Dismissed, SnoozeExpired, CriticalOverride }
@@ -29,7 +33,6 @@ pub struct AlertEvent {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AlertEventHistory { limit: usize, events: Vec<AlertEvent> }
-
 impl Default for AlertEventHistory { fn default() -> Self { Self::new(DEFAULT_ALERT_HISTORY_LIMIT) } }
 impl AlertEventHistory {
     pub fn new(limit: usize) -> Self { Self { limit, events: Vec::new() } }
@@ -45,12 +48,51 @@ pub fn event_reason(state: AlertState, severity: AlertSeverity, now_ms: u128) ->
 }
 
 pub fn create_event(timestamp_ms: u128, kind: SignalKind, level: HealthLevel, value: f64, state: AlertState, decision: AlertDecision) -> Option<AlertEvent> {
-    create_event_with_process_evidence(timestamp_ms, kind, level, value, state, decision, Vec::new())
+    let severity = match level { HealthLevel::Healthy => return None, HealthLevel::Warning => AlertSeverity::Warning, HealthLevel::Critical => AlertSeverity::Critical };
+    let process_evidence = capture_process_evidence(kind);
+    Some(AlertEvent { timestamp_ms, performance_timestamp_ms: None, process_evidence, kind, severity, value, decision, reason: event_reason(state, severity, timestamp_ms) })
 }
 
-pub fn create_event_with_process_evidence(timestamp_ms: u128, kind: SignalKind, level: HealthLevel, value: f64, state: AlertState, decision: AlertDecision, process_evidence: Vec<AlertProcessEvidence>) -> Option<AlertEvent> {
-    let severity = match level { HealthLevel::Healthy => return None, HealthLevel::Warning => AlertSeverity::Warning, HealthLevel::Critical => AlertSeverity::Critical };
-    Some(AlertEvent { timestamp_ms, performance_timestamp_ms: None, process_evidence, kind, severity, value, decision, reason: event_reason(state, severity, timestamp_ms) })
+#[cfg(target_os = "linux")]
+fn capture_process_evidence(kind: SignalKind) -> Vec<AlertProcessEvidence> {
+    let total_memory = fs::read_to_string(MEM_INFO).ok().and_then(|content| content.lines().find(|line| line.starts_with("MemTotal:"))?.split_whitespace().nth(1)?.parse::<u64>().ok()).unwrap_or(0).saturating_mul(1024);
+    let mut entries = Vec::new();
+    let Ok(dir) = fs::read_dir(PROC) else { return entries };
+    for entry in dir.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.is_empty() || !name.bytes().all(|b| b.is_ascii_digit()) { continue; }
+        let Ok(pid) = name.parse::<u32>() else { continue };
+        let path = entry.path();
+        let Ok(status) = fs::read_to_string(path.join("status")) else { continue };
+        let process_name = status.lines().find_map(|line| line.strip_prefix("Name:").map(str::trim)).unwrap_or("unknown").to_owned();
+        let memory_bytes = status.lines().find(|line| line.starts_with("VmRSS:")).and_then(|line| line.split_whitespace().nth(1)?.parse::<u64>().ok()).unwrap_or(0).saturating_mul(1024);
+        let cpu_time_ticks = read_cpu_ticks(&path).unwrap_or(0);
+        let memory_percent = if total_memory == 0 { 0.0 } else { 100.0 * memory_bytes as f64 / total_memory as f64 };
+        entries.push(AlertProcessEvidence { pid, name: process_name, memory_percent, cpu_time_ticks, rank: 0 });
+        if entries.len() >= 500 { break; }
+    }
+    match kind {
+        SignalKind::Memory => entries.sort_by(|a, b| b.memory_percent.total_cmp(&a.memory_percent).then_with(|| a.pid.cmp(&b.pid))),
+        SignalKind::Cpu => entries.sort_by(|a, b| b.cpu_time_ticks.cmp(&a.cpu_time_ticks).then_with(|| a.pid.cmp(&b.pid))),
+        _ => return Vec::new(),
+    }
+    entries.truncate(PROCESS_EVIDENCE_LIMIT);
+    for (index, entry) in entries.iter_mut().enumerate() { entry.rank = index + 1; }
+    entries
+}
+
+#[cfg(not(target_os = "linux"))]
+fn capture_process_evidence(_kind: SignalKind) -> Vec<AlertProcessEvidence> { Vec::new() }
+
+#[cfg(target_os = "linux")]
+fn read_cpu_ticks(path: &Path) -> Option<u64> {
+    let stat = fs::read_to_string(path.join("stat")).ok()?;
+    let (_, fields) = stat.split_once(')')?;
+    let fields: Vec<&str> = fields.split_whitespace().collect();
+    if fields.len() < 13 { return None; }
+    let utime = fields[11].parse::<u64>().ok()?;
+    let stime = fields[12].parse::<u64>().ok()?;
+    Some(utime.saturating_add(stime))
 }
 
 #[cfg(test)]
@@ -65,5 +107,5 @@ mod tests {
     #[test] fn snoozed_warning_records_suppressed_reason() { let event = create_event(1_000, SignalKind::Swap, HealthLevel::Warning, 25.0, AlertState::Snoozed { until_ms: 2_000 }, AlertDecision::Suppressed).unwrap(); assert_eq!(event.reason, AlertEventReason::Snoozed); }
     #[test] fn expired_snooze_records_expiry_reason() { let event = create_event(2_000, SignalKind::Storage, HealthLevel::Warning, 82.0, AlertState::Snoozed { until_ms: 1_000 }, AlertDecision::Notify).unwrap(); assert_eq!(event.reason, AlertEventReason::SnoozeExpired); }
     #[test] fn healthy_signal_has_no_event() { assert!(create_event(1_000, SignalKind::Network, HealthLevel::Healthy, 20.0, AlertState::Active, AlertDecision::Notify).is_none()); }
-    #[test] fn process_evidence_is_retained() { let event = create_event_with_process_evidence(1_000, SignalKind::Memory, HealthLevel::Warning, 85.0, AlertState::Active, AlertDecision::Notify, vec![AlertProcessEvidence { pid: 42, name: "example".into(), memory_percent: 12.5, cpu_time_ticks: 100, rank: 1 }]).unwrap(); assert_eq!(event.process_evidence[0].pid, 42); assert_eq!(event.process_evidence[0].rank, 1); }
+    #[test] fn process_evidence_is_bounded() { let event = create_event(1_000, SignalKind::Memory, HealthLevel::Warning, 85.0, AlertState::Active, AlertDecision::Notify).unwrap(); assert!(event.process_evidence.len() <= PROCESS_EVIDENCE_LIMIT); assert!(event.process_evidence.windows(2).all(|pair| pair[0].rank < pair[1].rank)); }
 }
