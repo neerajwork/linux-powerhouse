@@ -12,8 +12,9 @@ pub mod performance;
 pub use alert_correlation::{AlertPerformanceCorrelation, correlate_alert};
 pub use alert_explanation::{AlertExplanation, explain_alert};
 pub use alert_history::{
-    AlertEvent, AlertEventHistory, AlertEventReason, DEFAULT_ALERT_HISTORY_LIMIT,
-    create_event as create_alert_event, event_reason as alert_event_reason,
+    AlertEvent, AlertEventHistory, AlertEventReason, AlertProcessEvidence,
+    DEFAULT_ALERT_HISTORY_LIMIT, create_event as create_alert_event,
+    event_reason as alert_event_reason,
 };
 pub use alerts::{AlertDecision, AlertPolicy, AlertSeverity, AlertState, alert_decision};
 pub use performance::{

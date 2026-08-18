@@ -3,9 +3,18 @@ import { invoke } from "@tauri-apps/api/core";
 import { AlertHistoryInsights } from "./AlertHistoryInsights";
 import { AlertHistorySummary } from "./AlertHistorySummary";
 
+type AlertProcessEvidence = {
+  pid: number;
+  name: string;
+  memory_percent: number;
+  cpu_time_ticks: number;
+  rank: number;
+};
+
 type AlertEvent = {
   timestamp_ms: number;
   performance_timestamp_ms?: number | null;
+  process_evidence?: AlertProcessEvidence[];
   kind: "Cpu" | "Memory" | "Swap" | "Storage" | "Network";
   severity: "Warning" | "Critical";
   value: number;
@@ -94,6 +103,11 @@ const primaryEvidence = (event: AlertEvent, snapshot: MonitorSnapshot): string =
   }
 };
 
+const processMetric = (event: AlertEvent, process: AlertProcessEvidence): string =>
+  event.kind === "Memory"
+    ? `${process.memory_percent.toFixed(1)}% memory`
+    : `${process.cpu_time_ticks.toLocaleString()} CPU ticks`;
+
 export function AlertEventHistory() {
   const [events, setEvents] = useState<AlertEvent[]>([]);
   const [snapshots, setSnapshots] = useState<MonitorSnapshot[]>([]);
@@ -167,7 +181,7 @@ export function AlertEventHistory() {
         <div>
           <p className="eyebrow">ALERT HISTORY</p>
           <h2 id="alert-history-title">Alert event history</h2>
-          <p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, and performance evidence.</p>
+          <p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, performance evidence, and process contributors.</p>
         </div>
         <button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>Clear history</button>
       </div>
@@ -192,6 +206,7 @@ export function AlertEventHistory() {
         const evidenceAge = snapshot && event.performance_timestamp_ms != null
           ? Math.abs(snapshot.timestamp_ms - event.performance_timestamp_ms)
           : null;
+        const processEvidence = event.process_evidence ?? [];
 
         return (
           <article className="row" key={`${event.timestamp_ms}-${event.kind}-${index}`}>
@@ -214,6 +229,19 @@ export function AlertEventHistory() {
                       </small>
                     )}
                   </div>
+                  {(event.kind === "Cpu" || event.kind === "Memory") && (
+                    <div className="alert-history__evidence">
+                      <strong>Process contributors at alert time</strong>
+                      {processEvidence.length
+                        ? processEvidence.map((process) => (
+                            <span key={`${process.pid}-${process.rank}`}>
+                              #{process.rank} {process.name} · PID {process.pid} · {processMetric(event, process)}
+                            </span>
+                          ))
+                        : <span>No process evidence was available for this event.</span>}
+                      <small>These are bounded local observations, not proof that a process caused the alert.</small>
+                    </div>
+                  )}
                 </div>
               </details>
             </div>
@@ -221,7 +249,7 @@ export function AlertEventHistory() {
           </article>
         );
       })}</div>}
-      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, and evidence only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
+      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, evidence, and process contributors only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
     </section>
   );
 }

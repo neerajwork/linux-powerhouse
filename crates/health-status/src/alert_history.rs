@@ -1,7 +1,11 @@
 use super::{AlertDecision, AlertSeverity, AlertState, HealthLevel, SignalKind};
 use serde::{Deserialize, Serialize};
+use std::{fs, path::Path};
 
 pub const DEFAULT_ALERT_HISTORY_LIMIT: usize = 100;
+const PROCESS_EVIDENCE_LIMIT: usize = 5;
+const PROC: &str = "/proc";
+const MEM_INFO: &str = "/proc/meminfo";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AlertEventReason {
@@ -13,10 +17,21 @@ pub enum AlertEventReason {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AlertProcessEvidence {
+    pub pid: u32,
+    pub name: String,
+    pub memory_percent: f64,
+    pub cpu_time_ticks: u64,
+    pub rank: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AlertEvent {
     pub timestamp_ms: u128,
     #[serde(default)]
     pub performance_timestamp_ms: Option<u128>,
+    #[serde(default)]
+    pub process_evidence: Vec<AlertProcessEvidence>,
     pub kind: SignalKind,
     pub severity: AlertSeverity,
     pub value: f64,
@@ -96,12 +111,113 @@ pub fn create_event(
     Some(AlertEvent {
         timestamp_ms,
         performance_timestamp_ms: None,
+        process_evidence: capture_process_evidence(kind),
         kind,
         severity,
         value,
         decision,
         reason: event_reason(state, severity, timestamp_ms),
     })
+}
+
+#[cfg(target_os = "linux")]
+fn capture_process_evidence(kind: SignalKind) -> Vec<AlertProcessEvidence> {
+    let memory_total = fs::read_to_string(MEM_INFO)
+        .ok()
+        .and_then(|content| {
+            content
+                .lines()
+                .find(|line| line.starts_with("MemTotal:"))
+                .and_then(|line| line.split_whitespace().nth(1))
+                .and_then(|value| value.parse::<u64>().ok())
+        })
+        .unwrap_or(0)
+        .saturating_mul(1024);
+
+    let mut entries = Vec::new();
+    let Ok(directory) = fs::read_dir(PROC) else {
+        return entries;
+    };
+
+    for entry in directory.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.is_empty() || !name.bytes().all(|byte| byte.is_ascii_digit()) {
+            continue;
+        }
+        let Ok(pid) = name.parse::<u32>() else {
+            continue;
+        };
+        let path = entry.path();
+        let Ok(status) = fs::read_to_string(path.join("status")) else {
+            continue;
+        };
+        let process_name = status
+            .lines()
+            .find_map(|line| line.strip_prefix("Name:").map(str::trim))
+            .unwrap_or("unknown")
+            .to_owned();
+        let memory_bytes = status
+            .lines()
+            .find(|line| line.starts_with("VmRSS:"))
+            .and_then(|line| line.split_whitespace().nth(1))
+            .and_then(|value| value.parse::<u64>().ok())
+            .unwrap_or(0)
+            .saturating_mul(1024);
+        let cpu_time_ticks = read_cpu_ticks(&path).unwrap_or(0);
+        let memory_percent = if memory_total == 0 {
+            0.0
+        } else {
+            100.0 * memory_bytes as f64 / memory_total as f64
+        };
+        entries.push(AlertProcessEvidence {
+            pid,
+            name: process_name,
+            memory_percent,
+            cpu_time_ticks,
+            rank: 0,
+        });
+        if entries.len() >= 500 {
+            break;
+        }
+    }
+
+    match kind {
+        SignalKind::Memory => entries.sort_by(|a, b| {
+            b.memory_percent
+                .total_cmp(&a.memory_percent)
+                .then_with(|| a.pid.cmp(&b.pid))
+        }),
+        SignalKind::Cpu => entries.sort_by(|a, b| {
+            b.cpu_time_ticks
+                .cmp(&a.cpu_time_ticks)
+                .then_with(|| a.pid.cmp(&b.pid))
+        }),
+        _ => return Vec::new(),
+    }
+
+    entries.truncate(PROCESS_EVIDENCE_LIMIT);
+    for (index, entry) in entries.iter_mut().enumerate() {
+        entry.rank = index + 1;
+    }
+    entries
+}
+
+#[cfg(not(target_os = "linux"))]
+fn capture_process_evidence(_kind: SignalKind) -> Vec<AlertProcessEvidence> {
+    Vec::new()
+}
+
+#[cfg(target_os = "linux")]
+fn read_cpu_ticks(path: &Path) -> Option<u64> {
+    let stat = fs::read_to_string(path.join("stat")).ok()?;
+    let (_, fields) = stat.split_once(')')?;
+    let fields: Vec<&str> = fields.split_whitespace().collect();
+    if fields.len() < 13 {
+        return None;
+    }
+    let utime = fields[11].parse::<u64>().ok()?;
+    let stime = fields[12].parse::<u64>().ok()?;
+    Some(utime.saturating_add(stime))
 }
 
 #[cfg(test)]
@@ -112,6 +228,7 @@ mod tests {
         AlertEvent {
             timestamp_ms,
             performance_timestamp_ms: None,
+            process_evidence: Vec::new(),
             kind: SignalKind::Cpu,
             severity: AlertSeverity::Warning,
             value: 85.0,
@@ -214,6 +331,26 @@ mod tests {
                 AlertDecision::Notify
             )
             .is_none()
+        );
+    }
+
+    #[test]
+    fn process_evidence_is_bounded() {
+        let event = create_event(
+            1_000,
+            SignalKind::Memory,
+            HealthLevel::Warning,
+            85.0,
+            AlertState::Active,
+            AlertDecision::Notify,
+        )
+        .unwrap();
+        assert!(event.process_evidence.len() <= PROCESS_EVIDENCE_LIMIT);
+        assert!(
+            event
+                .process_evidence
+                .windows(2)
+                .all(|pair| pair[0].rank < pair[1].rank)
         );
     }
 }
