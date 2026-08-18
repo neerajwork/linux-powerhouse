@@ -18,7 +18,9 @@ pub fn guide_alert(event: &AlertEvent) -> AlertGuidance {
         SignalKind::Memory => {
             "Review the processes contributing to elevated memory usage.".to_owned()
         }
-        SignalKind::Swap => "Check memory pressure and whether swap usage remains elevated.".to_owned(),
+        SignalKind::Swap => {
+            "Check memory pressure and whether swap usage remains elevated.".to_owned()
+        }
         SignalKind::Storage => {
             "Check filesystem usage and recent disk activity before taking action.".to_owned()
         }
