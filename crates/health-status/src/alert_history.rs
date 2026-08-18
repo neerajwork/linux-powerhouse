@@ -321,15 +321,17 @@ mod tests {
 
     #[test]
     fn healthy_signal_has_no_event() {
-        assert!(create_event(
-            1_000,
-            SignalKind::Network,
-            HealthLevel::Healthy,
-            20.0,
-            AlertState::Active,
-            AlertDecision::Notify
-        )
-        .is_none());
+        assert!(
+            create_event(
+                1_000,
+                SignalKind::Network,
+                HealthLevel::Healthy,
+                20.0,
+                AlertState::Active,
+                AlertDecision::Notify
+            )
+            .is_none()
+        );
     }
 
     #[test]
@@ -344,9 +346,11 @@ mod tests {
         )
         .unwrap();
         assert!(event.process_evidence.len() <= PROCESS_EVIDENCE_LIMIT);
-        assert!(event
-            .process_evidence
-            .windows(2)
-            .all(|pair| pair[0].rank < pair[1].rank));
+        assert!(
+            event
+                .process_evidence
+                .windows(2)
+                .all(|pair| pair[0].rank < pair[1].rank)
+        );
     }
 }
