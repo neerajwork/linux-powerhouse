@@ -107,6 +107,7 @@ mod tests {
             value: 90.0,
             decision: AlertDecision::Notify,
             reason: AlertEventReason::ActivePolicy,
+            process_evidence: Vec::new(),
         }
     }
 
