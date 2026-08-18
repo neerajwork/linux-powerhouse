@@ -15,10 +15,16 @@ pub struct AlertGuidance {
 pub fn guide_alert(event: &AlertEvent) -> AlertGuidance {
     let summary = match event.kind {
         SignalKind::Cpu => "Review the processes contributing to sustained CPU load.".to_owned(),
-        SignalKind::Memory => "Review the processes contributing to elevated memory usage.".to_owned(),
+        SignalKind::Memory => {
+            "Review the processes contributing to elevated memory usage.".to_owned()
+        }
         SignalKind::Swap => "Check memory pressure and whether swap usage remains elevated.".to_owned(),
-        SignalKind::Storage => "Check filesystem usage and recent disk activity before taking action.".to_owned(),
-        SignalKind::Network => "Review recent network activity and connectivity if the condition persists.".to_owned(),
+        SignalKind::Storage => {
+            "Check filesystem usage and recent disk activity before taking action.".to_owned()
+        }
+        SignalKind::Network => {
+            "Review recent network activity and connectivity if the condition persists.".to_owned()
+        }
     };
 
     let mut steps = match event.kind {
@@ -57,7 +63,10 @@ pub fn guide_alert(event: &AlertEvent) -> AlertGuidance {
     }
 
     if event.reason == AlertEventReason::Snoozed || event.reason == AlertEventReason::Dismissed {
-        steps.push("The warning was previously suppressed or dismissed; review it again if the condition persists.".to_owned());
+        steps.push(
+            "The warning was previously suppressed or dismissed; review it again if the condition persists."
+                .to_owned(),
+        );
     }
 
     AlertGuidance {
@@ -118,6 +127,9 @@ mod tests {
             AlertEventReason::Dismissed,
         ));
 
-        assert!(guidance.steps.iter().any(|step| step.contains("previously suppressed or dismissed")));
+        assert!(guidance
+            .steps
+            .iter()
+            .any(|step| step.contains("previously suppressed or dismissed")));
     }
 }
