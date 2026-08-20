@@ -4,12 +4,14 @@ use monitoring::MonitorSnapshot;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod alert_action_preview;
 pub mod alert_correlation;
 pub mod alert_explanation;
 pub mod alert_guidance;
 pub mod alert_history;
 pub mod alerts;
 pub mod performance;
+pub use alert_action_preview::{AlertActionPreview, preview_alert_actions};
 pub use alert_correlation::{AlertPerformanceCorrelation, correlate_alert};
 pub use alert_explanation::{AlertExplanation, explain_alert};
 pub use alert_guidance::{AlertGuidance, guide_alert};
@@ -135,12 +137,8 @@ fn threshold_signal(
     };
     let message = match level {
         HealthLevel::Healthy => format!("{label} is within the healthy range."),
-        HealthLevel::Warning => {
-            format!("{label} is elevated at {value:.1}%.")
-        }
-        HealthLevel::Critical => {
-            format!("{label} is critically high at {value:.1}%.")
-        }
+        HealthLevel::Warning => format!("{label} is elevated at {value:.1}%"),
+        HealthLevel::Critical => format!("{label} is critically high at {value:.1}%"),
     };
     HealthSignal {
         kind,
