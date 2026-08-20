@@ -211,11 +211,7 @@ Status: **Complete**.
 - Do not change alert policy, persistence, retention, snooze, dismissal, or existing remediation behavior.
 
 ### Step 64 — Explicit Action Confirmation
-Status: **In progress**.
-
-Introduce an explicit user-intent boundary after deterministic action previews, without crossing into execution.
-
-Acceptance goals:
+Status: **Complete**.
 
 - Validate confirmation requests against the deterministic action-preview source of truth.
 - Expose a dedicated Tauri confirmation command.
@@ -224,6 +220,21 @@ Acceptance goals:
 - Ensure confirmation never authorizes, executes, or mutates system state.
 - Reject unknown action identifiers deterministically.
 - Keep confirmation local, bounded, non-privileged, and non-executable.
+
+### Step 65 — Execution Eligibility Gate
+Status: **In progress**.
+
+Define the safety boundary between explicit user intent and any future action execution.
+
+Acceptance goals:
+
+- Represent execution eligibility as a deterministic, serializable result.
+- Require confirmation, authorization, and executable capability before an action can be considered eligible.
+- Reject privileged actions from the current non-privileged execution path.
+- Make explicit that confirmation alone never grants execution eligibility.
+- Keep the eligibility evaluation local, bounded, deterministic, and non-mutating.
+- Introduce no shell execution, process termination, file deletion, service restart, network mutation, or privilege escalation.
+- Preserve a clear architectural boundary for a later narrowly scoped execution milestone.
 
 ## Subsequent expansion areas
 
