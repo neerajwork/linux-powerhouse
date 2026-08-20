@@ -1,4 +1,4 @@
-use crate::{preview_alert_actions, AlertEvent};
+use crate::{AlertEvent, preview_alert_actions};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
