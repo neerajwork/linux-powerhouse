@@ -4,6 +4,7 @@ use monitoring::MonitorSnapshot;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod alert_action_authorization;
 pub mod alert_action_confirmation;
 pub mod alert_action_execution;
 pub mod alert_action_preview;
@@ -13,6 +14,7 @@ pub mod alert_guidance;
 pub mod alert_history;
 pub mod alerts;
 pub mod performance;
+pub use alert_action_authorization::{AlertActionAuthorization, authorize_alert_action};
 pub use alert_action_confirmation::{AlertActionConfirmation, confirm_alert_action};
 pub use alert_action_execution::{AlertActionExecutionEligibility, evaluate_execution_eligibility};
 pub use alert_action_preview::{AlertActionPreview, preview_alert_actions};
