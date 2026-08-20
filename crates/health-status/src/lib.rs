@@ -137,19 +137,10 @@ fn threshold_signal(
     };
     let message = match level {
         HealthLevel::Healthy => format!("{label} is within the healthy range."),
-        HealthLevel::Warning => {
-            format!("{label} is elevated at {value:.1}%.")
-        }
-        HealthLevel::Critical => {
-            format!("{label} is critically high at {value:.1}%.")
-        }
+        HealthLevel::Warning => format!("{label} is elevated at {value:.1}%"),
+        HealthLevel::Critical => format!("{label} is critically high at {value:.1}%"),
     };
-    HealthSignal {
-        kind,
-        level,
-        value,
-        message,
-    }
+    HealthSignal { kind, level, value, message }
 }
 
 fn level_rank(level: &HealthLevel) -> u8 {
@@ -180,18 +171,31 @@ mod tests {
             storage_write_bytes_per_second: 0.0,
             process_count: 0,
             running_processes: 0,
+            baseline: None,
+            deviation: None,
         }
     }
 
     #[test]
-    fn evaluates_healthy_snapshot() {
-        let health = evaluate(Some(&snapshot(20.0, 30.0, 0.0)), Some(40)).unwrap();
-        assert_eq!(health.overall, HealthLevel::Healthy);
+    fn healthy_metrics_produce_healthy_status() {
+        let result = evaluate(Some(&snapshot(20.0, 40.0, 0.0)), Some(50)).unwrap();
+        assert_eq!(result.overall, HealthLevel::Healthy);
     }
 
     #[test]
-    fn evaluates_critical_snapshot() {
-        let health = evaluate(Some(&snapshot(96.0, 30.0, 0.0)), None).unwrap();
-        assert_eq!(health.overall, HealthLevel::Critical);
+    fn elevated_metrics_produce_warning() {
+        let result = evaluate(Some(&snapshot(85.0, 40.0, 0.0)), Some(50)).unwrap();
+        assert_eq!(result.overall, HealthLevel::Warning);
+    }
+
+    #[test]
+    fn critical_metrics_produce_critical_status() {
+        let result = evaluate(Some(&snapshot(96.0, 40.0, 0.0)), Some(95)).unwrap();
+        assert_eq!(result.overall, HealthLevel::Critical);
+    }
+
+    #[test]
+    fn missing_monitoring_snapshot_is_an_error() {
+        assert!(matches!(evaluate(None, None), Err(HealthStatusError::NoSnapshot)));
     }
 }
