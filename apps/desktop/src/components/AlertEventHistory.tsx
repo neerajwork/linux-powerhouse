@@ -22,6 +22,12 @@ type AlertEvent = {
   reason: "ActivePolicy" | "Snoozed" | "Dismissed" | "SnoozeExpired" | "CriticalOverride";
 };
 
+type AlertGuidance = {
+  summary: string;
+  steps: string[];
+  safety_note: string;
+};
+
 type MonitorSnapshot = {
   timestamp_ms: number;
   cpu_percent: number;
@@ -108,9 +114,12 @@ const processMetric = (event: AlertEvent, process: AlertProcessEvidence): string
     ? `${process.memory_percent.toFixed(1)}% memory`
     : `${process.cpu_time_ticks.toLocaleString()} CPU ticks`;
 
+const eventKey = (event: AlertEvent, index: number): string => `${event.timestamp_ms}-${event.kind}-${index}`;
+
 export function AlertEventHistory() {
   const [events, setEvents] = useState<AlertEvent[]>([]);
   const [snapshots, setSnapshots] = useState<MonitorSnapshot[]>([]);
+  const [guidance, setGuidance] = useState<Record<string, AlertGuidance>>({});
   const [error, setError] = useState<string | null>(null);
   const [severity, setSeverity] = useState<SeverityFilter>("All");
   const [category, setCategory] = useState<CategoryFilter>("All");
@@ -126,6 +135,14 @@ export function AlertEventHistory() {
       ]);
       setEvents(history);
       setSnapshots(monitorHistory);
+
+      const entries = await Promise.all(
+        history.map(async (event, index) => [
+          eventKey(event, index),
+          await invoke<AlertGuidance>("alert_guidance", { event }),
+        ] as const),
+      );
+      setGuidance(Object.fromEntries(entries));
     } catch (err) {
       setError(String(err));
     }
@@ -161,6 +178,7 @@ export function AlertEventHistory() {
       setError(null);
       await invoke("clear_alert_event_history");
       setEvents([]);
+      setGuidance({});
     } catch (err) {
       setError(String(err));
     }
@@ -181,7 +199,7 @@ export function AlertEventHistory() {
         <div>
           <p className="eyebrow">ALERT HISTORY</p>
           <h2 id="alert-history-title">Alert event history</h2>
-          <p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, performance evidence, and process contributors.</p>
+          <p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, performance evidence, process contributors, and guidance.</p>
         </div>
         <button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>Clear history</button>
       </div>
@@ -207,6 +225,7 @@ export function AlertEventHistory() {
           ? Math.abs(snapshot.timestamp_ms - event.performance_timestamp_ms)
           : null;
         const processEvidence = event.process_evidence ?? [];
+        const guidanceForEvent = guidance[eventKey(event, events.indexOf(event))];
 
         return (
           <article className="row" key={`${event.timestamp_ms}-${event.kind}-${index}`}>
@@ -242,6 +261,16 @@ export function AlertEventHistory() {
                       <small>These are bounded local observations, not proof that a process caused the alert.</small>
                     </div>
                   )}
+                  {guidanceForEvent && (
+                    <div className="alert-history__evidence">
+                      <strong>What you can do</strong>
+                      <span>{guidanceForEvent.summary}</span>
+                      <ol>
+                        {guidanceForEvent.steps.map((step) => <li key={step}>{step}</li>)}
+                      </ol>
+                      <small>{guidanceForEvent.safety_note}</small>
+                    </div>
+                  )}
                 </div>
               </details>
             </div>
@@ -249,7 +278,7 @@ export function AlertEventHistory() {
           </article>
         );
       })}</div>}
-      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, evidence, and process contributors only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
+      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, evidence, process contributors, and guidance only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
     </section>
   );
 }

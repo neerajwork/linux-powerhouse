@@ -17,8 +17,9 @@ use execution_engine::{
     execute_system_status, execute_unified_system_intelligence,
 };
 use health_status::{
-    AlertDecision, AlertEvent, AlertEventHistory, AlertState, HealthLevel, HealthSnapshot,
-    PerformanceAnomalyReport, SignalKind, alert_decision, create_alert_event, explain_performance,
+    AlertDecision, AlertEvent, AlertEventHistory, AlertGuidance, AlertState, HealthLevel,
+    HealthSnapshot, PerformanceAnomalyReport, SignalKind, alert_decision, create_alert_event,
+    explain_performance, guide_alert,
 };
 use monitoring::{Monitor, MonitorSnapshot, PerformanceHistoryComparison};
 use network_intelligence::NetworkAnalysis;
@@ -374,6 +375,11 @@ fn alert_event_history(state: tauri::State<'_, AppState>) -> Result<Vec<AlertEve
 }
 
 #[tauri::command]
+fn alert_guidance(event: AlertEvent) -> AlertGuidance {
+    guide_alert(&event)
+}
+
+#[tauri::command]
 fn clear_alert_event_history(state: tauri::State<'_, AppState>) -> Result<(), String> {
     state
         .alert_history
@@ -433,6 +439,7 @@ pub fn run() {
             health_status,
             alert_decision_for_signal,
             alert_event_history,
+            alert_guidance,
             clear_alert_event_history
         ])
         .run(tauri::generate_context!())
