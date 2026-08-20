@@ -101,7 +101,10 @@ pub fn preview_alert_actions(event: &AlertEvent) -> Vec<AlertActionPreview> {
         );
     }
 
-    if matches!(event.reason, AlertEventReason::Snoozed | AlertEventReason::Dismissed) {
+    if matches!(
+        event.reason,
+        AlertEventReason::Snoozed | AlertEventReason::Dismissed
+    ) {
         previews.push(preview(
             "recheck-suppressed-warning",
             "Recheck the suppressed warning",
@@ -145,22 +148,48 @@ mod tests {
 
     #[test]
     fn previews_are_never_executable() {
-        for kind in [SignalKind::Cpu, SignalKind::Memory, SignalKind::Swap, SignalKind::Storage, SignalKind::Network] {
-            let previews = preview_alert_actions(&event(kind, AlertSeverity::Warning, AlertEventReason::ActivePolicy));
+        for kind in [
+            SignalKind::Cpu,
+            SignalKind::Memory,
+            SignalKind::Swap,
+            SignalKind::Storage,
+            SignalKind::Network,
+        ] {
+            let previews = preview_alert_actions(&event(
+                kind,
+                AlertSeverity::Warning,
+                AlertEventReason::ActivePolicy,
+            ));
             assert!(!previews.is_empty());
-            assert!(previews.iter().all(|item| !item.executable && !item.requires_privilege));
+            assert!(
+                previews
+                    .iter()
+                    .all(|item| !item.executable && !item.requires_privilege)
+            );
         }
     }
 
     #[test]
     fn critical_alerts_start_with_verification() {
-        let previews = preview_alert_actions(&event(SignalKind::Cpu, AlertSeverity::Critical, AlertEventReason::CriticalOverride));
+        let previews = preview_alert_actions(&event(
+            SignalKind::Cpu,
+            AlertSeverity::Critical,
+            AlertEventReason::CriticalOverride,
+        ));
         assert_eq!(previews[0].id, "verify-critical-condition");
     }
 
     #[test]
     fn dismissed_alerts_get_recheck_preview() {
-        let previews = preview_alert_actions(&event(SignalKind::Storage, AlertSeverity::Warning, AlertEventReason::Dismissed));
-        assert!(previews.iter().any(|item| item.id == "recheck-suppressed-warning"));
+        let previews = preview_alert_actions(&event(
+            SignalKind::Storage,
+            AlertSeverity::Warning,
+            AlertEventReason::Dismissed,
+        ));
+        assert!(
+            previews
+                .iter()
+                .any(|item| item.id == "recheck-suppressed-warning")
+        );
     }
 }
