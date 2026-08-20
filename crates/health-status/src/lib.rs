@@ -140,7 +140,12 @@ fn threshold_signal(
         HealthLevel::Warning => format!("{label} is elevated at {value:.1}%"),
         HealthLevel::Critical => format!("{label} is critically high at {value:.1}%"),
     };
-    HealthSignal { kind, level, value, message }
+    HealthSignal {
+        kind,
+        level,
+        value,
+        message,
+    }
 }
 
 fn level_rank(level: &HealthLevel) -> u8 {
@@ -196,6 +201,9 @@ mod tests {
 
     #[test]
     fn missing_monitoring_snapshot_is_an_error() {
-        assert!(matches!(evaluate(None, None), Err(HealthStatusError::NoSnapshot)));
+        assert!(matches!(
+            evaluate(None, None),
+            Err(HealthStatusError::NoSnapshot)
+        ));
     }
 }
