@@ -129,9 +129,11 @@ mod tests {
             AlertEventReason::Dismissed,
         ));
 
-        assert!(guidance
-            .steps
-            .iter()
-            .any(|step| step.contains("previously suppressed or dismissed")));
+        assert!(
+            guidance
+                .steps
+                .iter()
+                .any(|step| step.contains("previously suppressed or dismissed"))
+        );
     }
 }
