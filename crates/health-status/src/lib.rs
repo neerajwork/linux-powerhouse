@@ -108,24 +108,20 @@ pub fn evaluate(
         ),
     ];
 
-    if let Some(storage) = max_storage_usage {
+    if let Some(usage) = max_storage_usage {
         signals.push(threshold_signal(
             SignalKind::Storage,
-            storage as f64,
+            usage as f64,
             STORAGE_WARNING as f64,
             STORAGE_CRITICAL as f64,
-            "Storage utilization",
+            "Filesystem utilization",
         ));
     }
 
     let overall = signals
         .iter()
         .map(|signal| signal.level)
-        .max_by_key(|level| match level {
-            HealthLevel::Healthy => 0,
-            HealthLevel::Warning => 1,
-            HealthLevel::Critical => 2,
-        })
+        .max_by_key(level_rank)
         .unwrap_or(HealthLevel::Healthy);
 
     Ok(HealthSnapshot { overall, signals })
@@ -145,17 +141,75 @@ fn threshold_signal(
     } else {
         HealthLevel::Healthy
     };
-
     let message = match level {
-        HealthLevel::Healthy => format!("{label} is within the expected range."),
-        HealthLevel::Warning => format!("{label} is elevated."),
-        HealthLevel::Critical => format!("{label} is critically elevated."),
+        HealthLevel::Healthy => format!("{label} is within the healthy range."),
+        HealthLevel::Warning => format!("{label} is elevated at {value:.1}%"),
+        HealthLevel::Critical => format!("{label} is critically high at {value:.1}%"),
     };
-
     HealthSignal {
         kind,
         level,
         value,
         message,
+    }
+}
+
+fn level_rank(level: &HealthLevel) -> u8 {
+    match level {
+        HealthLevel::Healthy => 0,
+        HealthLevel::Warning => 1,
+        HealthLevel::Critical => 2,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use monitoring::{MonitorSnapshot, NetworkRate};
+
+    fn snapshot(cpu: f64, memory: f64, swap: f64) -> MonitorSnapshot {
+        MonitorSnapshot {
+            timestamp_ms: 1,
+            cpu_percent: cpu,
+            memory_percent: memory,
+            swap_percent: swap,
+            network: vec![NetworkRate {
+                name: "lo".into(),
+                rx_bytes_per_second: 0.0,
+                tx_bytes_per_second: 0.0,
+            }],
+            storage_read_bytes_per_second: 0.0,
+            storage_write_bytes_per_second: 0.0,
+            process_count: 0,
+            running_processes: 0,
+            baseline: None,
+            deviation: None,
+        }
+    }
+
+    #[test]
+    fn healthy_metrics_produce_healthy_status() {
+        let result = evaluate(Some(&snapshot(20.0, 40.0, 0.0)), Some(50)).unwrap();
+        assert_eq!(result.overall, HealthLevel::Healthy);
+    }
+
+    #[test]
+    fn elevated_metrics_produce_warning() {
+        let result = evaluate(Some(&snapshot(85.0, 40.0, 0.0)), Some(50)).unwrap();
+        assert_eq!(result.overall, HealthLevel::Warning);
+    }
+
+    #[test]
+    fn critical_metrics_produce_critical_status() {
+        let result = evaluate(Some(&snapshot(96.0, 40.0, 0.0)), Some(95)).unwrap();
+        assert_eq!(result.overall, HealthLevel::Critical);
+    }
+
+    #[test]
+    fn missing_monitoring_snapshot_is_an_error() {
+        assert!(matches!(
+            evaluate(None, None),
+            Err(HealthStatusError::NoSnapshot)
+        ));
     }
 }
