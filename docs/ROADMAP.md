@@ -171,10 +171,7 @@ Status: **Complete**.
 - Do not trigger remediation or alter stored alert history.
 
 ### Step 60 — Alert Evidence View
-
-Turn the Step 58 correlation and Step 59 explanation into an inspectable evidence view so users can see the underlying performance context alongside the human-readable explanation.
-
-Acceptance goals:
+Status: **Complete**.
 
 - Show the nearest correlated monitoring snapshot for an alert when it falls within the existing 30-second window.
 - Show signal-specific primary evidence for CPU, memory, swap, storage, and network alerts.
@@ -184,18 +181,50 @@ Acceptance goals:
 - Keep the evidence view local, deterministic, read-only, and presentation-only.
 - Do not change alert decisions, persistence, retention, or remediation behavior.
 
+### Step 61 — Alert Process Evidence
+Status: **Complete**.
+
+- Surface bounded CPU and memory process contributors alongside alert evidence.
+- Preserve PID, process name, rank, and relevant resource metric.
+- Keep process observations explicitly non-causal.
+- Keep evidence local, deterministic, read-only, and bounded.
+
+### Step 62 — Alert Remediation Guidance
+Status: **Complete**.
+
+- Provide deterministic investigation guidance for CPU, memory, swap, storage, and network alerts.
+- Prioritize verification for critical events.
+- Encourage persistence checks for snoozed and dismissed warnings.
+- Keep guidance informational, non-mutating, and non-privileged.
+- Expose guidance through Tauri and render it with existing alert evidence.
+
+### Step 63 — Alert Action Preview
 Status: **In progress**.
+
+Turn Step 62 guidance into an explicit, inspectable preview layer before any future execution boundary.
+
+Acceptance goals:
+
+- Provide deterministic possible-action previews for CPU, memory, swap, storage, and network alerts.
+- Place critical-condition verification first for critical alerts.
+- Provide a recheck preview for snoozed and dismissed warnings.
+- Expose previews through a dedicated Tauri command.
+- Render previews in Desktop Alert History alongside evidence and guidance.
+- Mark every preview as non-executable and non-privileged.
+- Preserve the rule that previews do not authorize, execute, or mutate system state.
+- Do not change alert policy, persistence, retention, snooze, dismissal, or existing remediation behavior.
 
 ## Subsequent expansion areas
 
-After deterministic alert evidence views, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
+After the deterministic alert action-preview boundary, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
 
-1. **Cross-subsystem Alert Correlation** — connect alert categories with deeper performance, process, service, and network evidence.
-2. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
-3. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
-4. **Resource Optimization** — explainable opportunities to reduce resource consumption.
-5. **Automation** — carefully bounded recurring local workflows built on the action/audit foundation.
-6. **Linux Tool Ecosystem** — selectively expose mature command-line utilities through the capability-oriented Tool Registry.
+1. **Explicit Action Confirmation** — introduce a clear user-confirmation boundary for narrowly scoped, safe operations.
+2. **Cross-subsystem Alert Correlation** — connect alert categories with deeper performance, process, service, and network evidence.
+3. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
+4. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
+5. **Resource Optimization** — explainable opportunities to reduce resource consumption.
+6. **Automation** — carefully bounded recurring local workflows built on the action/audit foundation.
+7. **Linux Tool Ecosystem** — selectively expose mature command-line utilities through the capability-oriented Tool Registry.
 
 These are candidates, not committed step numbers. Each should be broken into small roadmap steps after requirements and safety boundaries are defined.
 
