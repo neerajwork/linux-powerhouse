@@ -19,7 +19,9 @@ pub fn authorize_alert_action(
     action_id: &str,
 ) -> Result<AlertActionAuthorization, String> {
     if confirmation.action_id != action_id {
-        return Err(format!("authorization action does not match confirmation: {action_id}"));
+        return Err(format!(
+            "authorization action does not match confirmation: {action_id}"
+        ));
     }
 
     if !confirmation.confirmed {
@@ -27,7 +29,10 @@ pub fn authorize_alert_action(
     }
 
     if confirmation.requires_privilege {
-        return Err("privileged actions cannot be authorized on the current non-privileged path".to_owned());
+        return Err(
+            "privileged actions cannot be authorized on the current non-privileged path"
+                .to_owned(),
+        );
     }
 
     Ok(AlertActionAuthorization {
