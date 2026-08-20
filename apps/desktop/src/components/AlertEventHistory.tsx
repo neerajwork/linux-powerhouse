@@ -14,6 +14,10 @@ type AlertActionPreview = {
   id: string; title: string; reason: string; scope: string; safety: string;
   requires_privilege: boolean; executable: boolean;
 };
+type AlertActionConfirmation = {
+  action_id: string; title: string; confirmed: boolean; authorized: boolean;
+  executable: boolean; requires_privilege: boolean; message: string;
+};
 type MonitorSnapshot = {
   timestamp_ms: number; cpu_percent: number; memory_percent: number; swap_percent: number;
   storage_read_bytes_per_second: number; storage_write_bytes_per_second: number; process_count: number; running_processes: number;
@@ -53,6 +57,7 @@ export function AlertEventHistory() {
   const [snapshots, setSnapshots] = useState<MonitorSnapshot[]>([]);
   const [guidance, setGuidance] = useState<Record<string, AlertGuidance>>({});
   const [previews, setPreviews] = useState<Record<string, AlertActionPreview[]>>({});
+  const [confirmations, setConfirmations] = useState<Record<string, AlertActionConfirmation>>({});
   const [error, setError] = useState<string | null>(null);
   const [severity, setSeverity] = useState<SeverityFilter>("All");
   const [category, setCategory] = useState<CategoryFilter>("All");
@@ -79,14 +84,23 @@ export function AlertEventHistory() {
   }, [events, severity, category, decision, time]);
 
   async function clearHistory() {
-    try { setError(null); await invoke("clear_alert_event_history"); setEvents([]); setGuidance({}); setPreviews({}); } catch (err) { setError(String(err)); }
+    try { setError(null); await invoke("clear_alert_event_history"); setEvents([]); setGuidance({}); setPreviews({}); setConfirmations({}); } catch (err) { setError(String(err)); }
   }
+
+  async function confirmAction(event: AlertEvent, key: string, actionId: string) {
+    try {
+      setError(null);
+      const confirmation = await invoke<AlertActionConfirmation>("alert_action_confirm", { event, actionId });
+      setConfirmations((current) => ({ ...current, [`${key}-${actionId}`]: confirmation }));
+    } catch (err) { setError(String(err)); }
+  }
+
   function resetFilters() { setSeverity("All"); setCategory("All"); setDecision("All"); setTime("All"); }
   const filtersActive = severity !== "All" || category !== "All" || decision !== "All" || time !== "All";
 
   return (
     <section className="alert-history" aria-labelledby="alert-history-title">
-      <div className="alert-history__header"><div><p className="eyebrow">ALERT HISTORY</p><h2 id="alert-history-title">Alert event history</h2><p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, performance evidence, process contributors, guidance, and action previews.</p></div><button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>Clear history</button></div>
+      <div className="alert-history__header"><div><p className="eyebrow">ALERT HISTORY</p><h2 id="alert-history-title">Alert event history</h2><p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, performance evidence, process contributors, guidance, action previews, and explicit confirmation.</p></div><button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>Clear history</button></div>
       <AlertHistorySummary events={events} />
       <AlertHistoryInsights events={events} />
       <div className="alert-history__filters" aria-label="Alert history filters">
@@ -108,12 +122,12 @@ export function AlertEventHistory() {
               <div className="alert-history__evidence"><strong>Performance evidence</strong><span>{evidence}</span>{snapshot && evidenceAge != null && <small>Snapshot {evidenceAge} ms from the alert context · memory {snapshot.memory_percent.toFixed(1)}% · swap {snapshot.swap_percent.toFixed(1)}% · {snapshot.process_count} processes · {snapshot.running_processes} running</small>}</div>
               {(event.kind === "Cpu" || event.kind === "Memory") && <div className="alert-history__evidence"><strong>Process contributors at alert time</strong>{processEvidence.length ? processEvidence.map((process) => <span key={`${process.pid}-${process.rank}`}>#{process.rank} {process.name} · PID {process.pid} · {processMetric(event, process)}</span>) : <span>No process evidence was available for this event.</span>}<small>These are bounded local observations, not proof that a process caused the alert.</small></div>}
               {guidanceForEvent && <div className="alert-history__evidence"><strong>What you can do</strong><span>{guidanceForEvent.summary}</span><ol>{guidanceForEvent.steps.map((step) => <li key={step}>{step}</li>)}</ol><small>{guidanceForEvent.safety_note}</small></div>}
-              {!!previewsForEvent.length && <div className="alert-history__evidence"><strong>Possible actions — preview only</strong><span>These are bounded options to consider. Linux Powerhouse does not execute or authorize them from this view.</span>{previewsForEvent.map((preview) => <div key={preview.id}><strong>{preview.title}</strong><span>{preview.reason}</span><small>{preview.scope} · Privilege: {preview.requires_privilege ? "Required" : "Not required"} · Executable: {preview.executable ? "Yes" : "No"}</small></div>)}<small>{previewsForEvent[0].safety}</small></div>}
+              {!!previewsForEvent.length && <div className="alert-history__evidence"><strong>Possible actions — preview only</strong><span>Review an option and explicitly confirm your intent. Confirmation does not authorize execution or change system state.</span>{previewsForEvent.map((preview) => { const confirmation = confirmations[`${key}-${preview.id}`]; return <div key={preview.id}><strong>{preview.title}</strong><span>{preview.reason}</span><small>{preview.scope} · Privilege: {preview.requires_privilege ? "Required" : "Not required"} · Executable: {preview.executable ? "Yes" : "No"}</small>{confirmation ? <small>{confirmation.message}</small> : <button className="secondary" onClick={() => void confirmAction(event, key, preview.id)}>Confirm intent</button>}</div>; })}<small>{previewsForEvent[0].safety}</small></div>}
             </div></details>
           </div><b>{event.decision === "Notify" ? "Notified" : "Suppressed"}</b>
         </article>;
       })}</div>}
-      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, evidence, process contributors, guidance, and action previews only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
+      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, evidence, process contributors, guidance, action previews, and confirmation only change the view and record explicit intent; history remains local, persistent, and bounded to the latest 100 events.</small>
     </section>
   );
 }

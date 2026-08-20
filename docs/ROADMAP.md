@@ -199,11 +199,7 @@ Status: **Complete**.
 - Expose guidance through Tauri and render it with existing alert evidence.
 
 ### Step 63 — Alert Action Preview
-Status: **In progress**.
-
-Turn Step 62 guidance into an explicit, inspectable preview layer before any future execution boundary.
-
-Acceptance goals:
+Status: **Complete**.
 
 - Provide deterministic possible-action previews for CPU, memory, swap, storage, and network alerts.
 - Place critical-condition verification first for critical alerts.
@@ -214,11 +210,26 @@ Acceptance goals:
 - Preserve the rule that previews do not authorize, execute, or mutate system state.
 - Do not change alert policy, persistence, retention, snooze, dismissal, or existing remediation behavior.
 
+### Step 64 — Explicit Action Confirmation
+Status: **In progress**.
+
+Introduce an explicit user-intent boundary after deterministic action previews, without crossing into execution.
+
+Acceptance goals:
+
+- Validate confirmation requests against the deterministic action-preview source of truth.
+- Expose a dedicated Tauri confirmation command.
+- Render an explicit **Confirm intent** control alongside each preview.
+- Show the resulting confirmation state clearly to the user.
+- Ensure confirmation never authorizes, executes, or mutates system state.
+- Reject unknown action identifiers deterministically.
+- Keep confirmation local, bounded, non-privileged, and non-executable.
+
 ## Subsequent expansion areas
 
-After the deterministic alert action-preview boundary, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
+After the deterministic alert confirmation boundary, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
 
-1. **Explicit Action Confirmation** — introduce a clear user-confirmation boundary for narrowly scoped, safe operations.
+1. **Explicit Action Execution** — introduce narrowly scoped execution only after confirmation, authorization, privilege, audit, and verification requirements are satisfied.
 2. **Cross-subsystem Alert Correlation** — connect alert categories with deeper performance, process, service, and network evidence.
 3. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
 4. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
