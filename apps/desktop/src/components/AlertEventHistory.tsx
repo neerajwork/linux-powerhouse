@@ -3,102 +3,39 @@ import { invoke } from "@tauri-apps/api/core";
 import { AlertHistoryInsights } from "./AlertHistoryInsights";
 import { AlertHistorySummary } from "./AlertHistorySummary";
 
-type AlertProcessEvidence = {
-  pid: number;
-  name: string;
-  memory_percent: number;
-  cpu_time_ticks: number;
-  rank: number;
-};
-
+type AlertProcessEvidence = { pid: number; name: string; memory_percent: number; cpu_time_ticks: number; rank: number };
 type AlertEvent = {
-  timestamp_ms: number;
-  performance_timestamp_ms?: number | null;
-  process_evidence?: AlertProcessEvidence[];
-  kind: "Cpu" | "Memory" | "Swap" | "Storage" | "Network";
-  severity: "Warning" | "Critical";
-  value: number;
-  decision: "Notify" | "Suppressed";
-  reason: "ActivePolicy" | "Snoozed" | "Dismissed" | "SnoozeExpired" | "CriticalOverride";
+  timestamp_ms: number; performance_timestamp_ms?: number | null; process_evidence?: AlertProcessEvidence[];
+  kind: "Cpu" | "Memory" | "Swap" | "Storage" | "Network"; severity: "Warning" | "Critical"; value: number;
+  decision: "Notify" | "Suppressed"; reason: "ActivePolicy" | "Snoozed" | "Dismissed" | "SnoozeExpired" | "CriticalOverride";
 };
-
-type AlertGuidance = {
-  summary: string;
-  steps: string[];
-  safety_note: string;
+type AlertGuidance = { summary: string; steps: string[]; safety_note: string };
+type AlertActionPreview = {
+  id: string; title: string; reason: string; scope: string; safety: string;
+  requires_privilege: boolean; executable: boolean;
 };
-
 type MonitorSnapshot = {
-  timestamp_ms: number;
-  cpu_percent: number;
-  memory_percent: number;
-  swap_percent: number;
-  storage_read_bytes_per_second: number;
-  storage_write_bytes_per_second: number;
-  process_count: number;
-  running_processes: number;
+  timestamp_ms: number; cpu_percent: number; memory_percent: number; swap_percent: number;
+  storage_read_bytes_per_second: number; storage_write_bytes_per_second: number; process_count: number; running_processes: number;
 };
-
 type SeverityFilter = "All" | AlertEvent["severity"];
 type CategoryFilter = "All" | AlertEvent["kind"];
 type DecisionFilter = "All" | AlertEvent["decision"];
 type TimeFilter = "All" | "24h" | "7d" | "30d";
-
 const CORRELATION_WINDOW_MS = 30_000;
-
 const categoryLabel = (kind: AlertEvent["kind"]): string => (kind === "Cpu" ? "CPU" : kind);
-
-const reasonLabel = (reason: AlertEvent["reason"]): string => {
-  switch (reason) {
-    case "ActivePolicy": return "Active policy";
-    case "Snoozed": return "Snoozed";
-    case "Dismissed": return "Dismissed";
-    case "SnoozeExpired": return "Snooze expired";
-    case "CriticalOverride": return "Critical override";
-  }
-};
-
+const reasonLabel = (reason: AlertEvent["reason"]): string => ({ ActivePolicy: "Active policy", Snoozed: "Snoozed", Dismissed: "Dismissed", SnoozeExpired: "Snooze expired", CriticalOverride: "Critical override" }[reason]);
 const explanation = (event: AlertEvent): { headline: string; detail: string; action: string } => {
   const label = categoryLabel(event.kind);
   const headline = event.severity === "Critical" ? `Critical ${label} alert` : `${label} warning alert`;
-  const detail = event.decision === "Notify"
-    ? `${label} reached ${event.value.toFixed(1)}%, so the active alert policy notified you.`
-    : `${label} reached ${event.value.toFixed(1)}%, but the routine warning was suppressed by the current alert policy.`;
-
-  let action: string;
-  switch (event.reason) {
-    case "CriticalOverride":
-      action = "Critical events remain visible regardless of routine warning preferences.";
-      break;
-    case "Snoozed":
-      action = "The routine warning was snoozed; review the event if the underlying condition persists.";
-      break;
-    case "Dismissed":
-      action = "The routine warning was dismissed; review the history if the condition returns.";
-      break;
-    case "SnoozeExpired":
-      action = "The snooze period had expired, so the routine warning returned to the active policy.";
-      break;
-    case "ActivePolicy":
-      action = "The active alert policy determined how this event was handled.";
-      break;
-  }
-
+  const detail = event.decision === "Notify" ? `${label} reached ${event.value.toFixed(1)}%, so the active alert policy notified you.` : `${label} reached ${event.value.toFixed(1)}%, but the routine warning was suppressed by the current alert policy.`;
+  const action = event.reason === "CriticalOverride" ? "Critical events remain visible regardless of routine warning preferences." : event.reason === "Snoozed" ? "The routine warning was snoozed; review the event if the underlying condition persists." : event.reason === "Dismissed" ? "The routine warning was dismissed; review the history if the condition returns." : event.reason === "SnoozeExpired" ? "The snooze period had expired, so the routine warning returned to the active policy." : "The active alert policy determined how this event was handled.";
   return { headline, detail, action };
 };
-
 const nearestSnapshot = (event: AlertEvent, snapshots: MonitorSnapshot[]): MonitorSnapshot | null => {
   if (event.performance_timestamp_ms == null || snapshots.length === 0) return null;
-
-  return snapshots
-    .map((snapshot) => ({
-      snapshot,
-      age: Math.abs(snapshot.timestamp_ms - event.performance_timestamp_ms!),
-    }))
-    .filter((item) => item.age <= CORRELATION_WINDOW_MS)
-    .sort((a, b) => a.age - b.age)[0]?.snapshot ?? null;
+  return snapshots.map((snapshot) => ({ snapshot, age: Math.abs(snapshot.timestamp_ms - event.performance_timestamp_ms!) })).filter((item) => item.age <= CORRELATION_WINDOW_MS).sort((a, b) => a.age - b.age)[0]?.snapshot ?? null;
 };
-
 const primaryEvidence = (event: AlertEvent, snapshot: MonitorSnapshot): string => {
   switch (event.kind) {
     case "Cpu": return `CPU utilization was ${snapshot.cpu_percent.toFixed(1)}% near the alert.`;
@@ -108,18 +45,14 @@ const primaryEvidence = (event: AlertEvent, snapshot: MonitorSnapshot): string =
     case "Network": return `Network activity was sampled near the alert; ${snapshot.process_count} processes were present at that time.`;
   }
 };
-
-const processMetric = (event: AlertEvent, process: AlertProcessEvidence): string =>
-  event.kind === "Memory"
-    ? `${process.memory_percent.toFixed(1)}% memory`
-    : `${process.cpu_time_ticks.toLocaleString()} CPU ticks`;
-
+const processMetric = (event: AlertEvent, process: AlertProcessEvidence): string => event.kind === "Memory" ? `${process.memory_percent.toFixed(1)}% memory` : `${process.cpu_time_ticks.toLocaleString()} CPU ticks`;
 const eventKey = (event: AlertEvent, index: number): string => `${event.timestamp_ms}-${event.kind}-${index}`;
 
 export function AlertEventHistory() {
   const [events, setEvents] = useState<AlertEvent[]>([]);
   const [snapshots, setSnapshots] = useState<MonitorSnapshot[]>([]);
   const [guidance, setGuidance] = useState<Record<string, AlertGuidance>>({});
+  const [previews, setPreviews] = useState<Record<string, AlertActionPreview[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [severity, setSeverity] = useState<SeverityFilter>("All");
   const [category, setCategory] = useState<CategoryFilter>("All");
@@ -129,84 +62,33 @@ export function AlertEventHistory() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [history, monitorHistory] = await Promise.all([
-        invoke<AlertEvent[]>("alert_event_history"),
-        invoke<MonitorSnapshot[]>("monitor_history"),
-      ]);
-      setEvents(history);
-      setSnapshots(monitorHistory);
-
-      const entries = await Promise.all(
-        history.map(async (event, index) => [
-          eventKey(event, index),
-          await invoke<AlertGuidance>("alert_guidance", { event }),
-        ] as const),
-      );
-      setGuidance(Object.fromEntries(entries));
-    } catch (err) {
-      setError(String(err));
-    }
+      const [history, monitorHistory] = await Promise.all([invoke<AlertEvent[]>("alert_event_history"), invoke<MonitorSnapshot[]>("monitor_history")]);
+      setEvents(history); setSnapshots(monitorHistory);
+      const entries = await Promise.all(history.map(async (event, index) => [eventKey(event, index), await invoke<AlertGuidance>("alert_guidance", { event })] as const));
+      const actionEntries = await Promise.all(history.map(async (event, index) => [eventKey(event, index), await invoke<AlertActionPreview[]>("alert_action_preview", { event })] as const));
+      setGuidance(Object.fromEntries(entries)); setPreviews(Object.fromEntries(actionEntries));
+    } catch (err) { setError(String(err)); }
   }, []);
 
-  useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(), 5000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+  useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 5000); return () => window.clearInterval(timer); }, [load]);
 
   const filteredEvents = useMemo(() => {
     const now = Date.now();
-    const cutoff = time === "24h"
-      ? now - 24 * 60 * 60 * 1000
-      : time === "7d"
-        ? now - 7 * 24 * 60 * 60 * 1000
-        : time === "30d"
-          ? now - 30 * 24 * 60 * 60 * 1000
-          : 0;
-
-    return events.filter(
-      (event) =>
-        (severity === "All" || event.severity === severity) &&
-        (category === "All" || event.kind === category) &&
-        (decision === "All" || event.decision === decision) &&
-        event.timestamp_ms >= cutoff,
-    );
+    const cutoff = time === "24h" ? now - 24 * 60 * 60 * 1000 : time === "7d" ? now - 7 * 24 * 60 * 60 * 1000 : time === "30d" ? now - 30 * 24 * 60 * 60 * 1000 : 0;
+    return events.filter((event) => (severity === "All" || event.severity === severity) && (category === "All" || event.kind === category) && (decision === "All" || event.decision === decision) && event.timestamp_ms >= cutoff);
   }, [events, severity, category, decision, time]);
 
   async function clearHistory() {
-    try {
-      setError(null);
-      await invoke("clear_alert_event_history");
-      setEvents([]);
-      setGuidance({});
-    } catch (err) {
-      setError(String(err));
-    }
+    try { setError(null); await invoke("clear_alert_event_history"); setEvents([]); setGuidance({}); setPreviews({}); } catch (err) { setError(String(err)); }
   }
-
-  function resetFilters() {
-    setSeverity("All");
-    setCategory("All");
-    setDecision("All");
-    setTime("All");
-  }
-
+  function resetFilters() { setSeverity("All"); setCategory("All"); setDecision("All"); setTime("All"); }
   const filtersActive = severity !== "All" || category !== "All" || decision !== "All" || time !== "All";
 
   return (
     <section className="alert-history" aria-labelledby="alert-history-title">
-      <div className="alert-history__header">
-        <div>
-          <p className="eyebrow">ALERT HISTORY</p>
-          <h2 id="alert-history-title">Alert event history</h2>
-          <p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, performance evidence, process contributors, and guidance.</p>
-        </div>
-        <button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>Clear history</button>
-      </div>
-
+      <div className="alert-history__header"><div><p className="eyebrow">ALERT HISTORY</p><h2 id="alert-history-title">Alert event history</h2><p className="subtitle">Review warning and critical decisions with focused local filters, deterministic explanations, performance evidence, process contributors, guidance, and action previews.</p></div><button className="secondary" onClick={() => void clearHistory()} disabled={!events.length}>Clear history</button></div>
       <AlertHistorySummary events={events} />
       <AlertHistoryInsights events={events} />
-
       <div className="alert-history__filters" aria-label="Alert history filters">
         <label>Severity<select value={severity} onChange={(event) => setSeverity(event.target.value as SeverityFilter)}><option value="All">All</option><option value="Warning">Warning</option><option value="Critical">Critical</option></select></label>
         <label>Category<select value={category} onChange={(event) => setCategory(event.target.value as CategoryFilter)}><option value="All">All</option><option value="Cpu">CPU</option><option value="Memory">Memory</option><option value="Swap">Swap</option><option value="Storage">Storage</option><option value="Network">Network</option></select></label>
@@ -214,71 +96,24 @@ export function AlertEventHistory() {
         <label>Time<select value={time} onChange={(event) => setTime(event.target.value as TimeFilter)}><option value="All">All time</option><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
         <button className="secondary" onClick={resetFilters} disabled={!filtersActive}>Reset filters</button>
       </div>
-
       {error && <div className="error">Unable to read alert history: {error}</div>}
       {!filteredEvents.length && !error && <article className="card"><strong>{events.length ? "No matching alert events." : "No alert events recorded yet."}</strong><span>{events.length ? "Adjust or reset the filters to broaden the history view." : "New warning and critical decisions will appear here."}</span></article>}
       {!!filteredEvents.length && <div className="list alert-history__list">{[...filteredEvents].reverse().map((event, index) => {
-        const why = explanation(event);
-        const snapshot = nearestSnapshot(event, snapshots);
-        const evidence = snapshot ? primaryEvidence(event, snapshot) : "No matching performance snapshot was available for this alert.";
-        const evidenceAge = snapshot && event.performance_timestamp_ms != null
-          ? Math.abs(snapshot.timestamp_ms - event.performance_timestamp_ms)
-          : null;
-        const processEvidence = event.process_evidence ?? [];
-        const guidanceForEvent = guidance[eventKey(event, events.indexOf(event))];
-
-        return (
-          <article className="row" key={`${event.timestamp_ms}-${event.kind}-${index}`}>
-            <div>
-              <strong>{categoryLabel(event.kind)} · {event.severity}</strong>
-              <span>{new Date(event.timestamp_ms).toLocaleString()} · {event.value.toFixed(1)}%</span>
-              <small>{reasonLabel(event.reason)}</small>
-              <details>
-                <summary>Why did this alert happen?</summary>
-                <div className="alert-history__explanation">
-                  <strong>{why.headline}</strong>
-                  <span>{why.detail}</span>
-                  <small>{why.action}</small>
-                  <div className="alert-history__evidence">
-                    <strong>Performance evidence</strong>
-                    <span>{evidence}</span>
-                    {snapshot && evidenceAge != null && (
-                      <small>
-                        Snapshot {evidenceAge} ms from the alert context · memory {snapshot.memory_percent.toFixed(1)}% · swap {snapshot.swap_percent.toFixed(1)}% · {snapshot.process_count} processes · {snapshot.running_processes} running
-                      </small>
-                    )}
-                  </div>
-                  {(event.kind === "Cpu" || event.kind === "Memory") && (
-                    <div className="alert-history__evidence">
-                      <strong>Process contributors at alert time</strong>
-                      {processEvidence.length
-                        ? processEvidence.map((process) => (
-                            <span key={`${process.pid}-${process.rank}`}>
-                              #{process.rank} {process.name} · PID {process.pid} · {processMetric(event, process)}
-                            </span>
-                          ))
-                        : <span>No process evidence was available for this event.</span>}
-                      <small>These are bounded local observations, not proof that a process caused the alert.</small>
-                    </div>
-                  )}
-                  {guidanceForEvent && (
-                    <div className="alert-history__evidence">
-                      <strong>What you can do</strong>
-                      <span>{guidanceForEvent.summary}</span>
-                      <ol>
-                        {guidanceForEvent.steps.map((step) => <li key={step}>{step}</li>)}
-                      </ol>
-                      <small>{guidanceForEvent.safety_note}</small>
-                    </div>
-                  )}
-                </div>
-              </details>
-            </div>
-            <b>{event.decision === "Notify" ? "Notified" : "Suppressed"}</b>
-          </article>
-        );
+        const why = explanation(event); const snapshot = nearestSnapshot(event, snapshots); const evidence = snapshot ? primaryEvidence(event, snapshot) : "No matching performance snapshot was available for this alert.";
+        const evidenceAge = snapshot && event.performance_timestamp_ms != null ? Math.abs(snapshot.timestamp_ms - event.performance_timestamp_ms) : null;
+        const processEvidence = event.process_evidence ?? []; const key = eventKey(event, events.indexOf(event)); const guidanceForEvent = guidance[key]; const previewsForEvent = previews[key] ?? [];
+        return <article className="row" key={`${event.timestamp_ms}-${event.kind}-${index}`}>
+          <div><strong>{categoryLabel(event.kind)} · {event.severity}</strong><span>{new Date(event.timestamp_ms).toLocaleString()} · {event.value.toFixed(1)}%</span><small>{reasonLabel(event.reason)}</small>
+            <details><summary>Why did this alert happen?</summary><div className="alert-history__explanation"><strong>{why.headline}</strong><span>{why.detail}</span><small>{why.action}</small>
+              <div className="alert-history__evidence"><strong>Performance evidence</strong><span>{evidence}</span>{snapshot && evidenceAge != null && <small>Snapshot {evidenceAge} ms from the alert context · memory {snapshot.memory_percent.toFixed(1)}% · swap {snapshot.swap_percent.toFixed(1)}% · {snapshot.process_count} processes · {snapshot.running_processes} running</small>}</div>
+              {(event.kind === "Cpu" || event.kind === "Memory") && <div className="alert-history__evidence"><strong>Process contributors at alert time</strong>{processEvidence.length ? processEvidence.map((process) => <span key={`${process.pid}-${process.rank}`}>#{process.rank} {process.name} · PID {process.pid} · {processMetric(event, process)}</span>) : <span>No process evidence was available for this event.</span>}<small>These are bounded local observations, not proof that a process caused the alert.</small></div>}
+              {guidanceForEvent && <div className="alert-history__evidence"><strong>What you can do</strong><span>{guidanceForEvent.summary}</span><ol>{guidanceForEvent.steps.map((step) => <li key={step}>{step}</li>)}</ol><small>{guidanceForEvent.safety_note}</small></div>}
+              {!!previewsForEvent.length && <div className="alert-history__evidence"><strong>Possible actions — preview only</strong><span>These are bounded options to consider. Linux Powerhouse does not execute or authorize them from this view.</span>{previewsForEvent.map((preview) => <div key={preview.id}><strong>{preview.title}</strong><span>{preview.reason}</span><small>{preview.scope} · Privilege: {preview.requires_privilege ? "Required" : "Not required"} · Executable: {preview.executable ? "Yes" : "No"}</small></div>)}<small>{previewsForEvent[0].safety}</small></div>}
+            </div></details>
+          </div><b>{event.decision === "Notify" ? "Notified" : "Suppressed"}</b>
+        </article>;
       })}</div>}
-      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, evidence, process contributors, and guidance only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
+      <small className="monitor-note">Showing {filteredEvents.length} of {events.length} retained events. Filtering, explanations, evidence, process contributors, guidance, and action previews only change the view; history remains local, persistent, and bounded to the latest 100 events.</small>
     </section>
   );
 }
