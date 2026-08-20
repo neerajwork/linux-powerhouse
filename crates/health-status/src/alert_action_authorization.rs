@@ -30,8 +30,7 @@ pub fn authorize_alert_action(
 
     if confirmation.requires_privilege {
         return Err(
-            "privileged actions cannot be authorized on the current non-privileged path"
-                .to_owned(),
+            "privileged actions cannot be authorized on the current non-privileged path".to_owned(),
         );
     }
 
