@@ -14,9 +14,7 @@ pub mod alert_history;
 pub mod alerts;
 pub mod performance;
 pub use alert_action_confirmation::{AlertActionConfirmation, confirm_alert_action};
-pub use alert_action_execution::{
-    AlertActionExecutionEligibility, evaluate_execution_eligibility,
-};
+pub use alert_action_execution::{AlertActionExecutionEligibility, evaluate_execution_eligibility};
 pub use alert_action_preview::{AlertActionPreview, preview_alert_actions};
 pub use alert_correlation::{AlertPerformanceCorrelation, correlate_alert};
 pub use alert_explanation::{AlertExplanation, explain_alert};
