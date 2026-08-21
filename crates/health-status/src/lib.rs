@@ -18,7 +18,8 @@ pub use alert_action_authorization::{AlertActionAuthorization, authorize_alert_a
 pub use alert_action_confirmation::{AlertActionConfirmation, confirm_alert_action};
 pub use alert_action_execution::{
     AlertActionExecutionEligibility, AlertActionExecutionRequest, AlertActionExecutionResult,
-    AlertActionVerificationResult, AlertActionVerificationStatus, create_execution_request,
+    AlertActionOutcome, AlertActionOutcomeStatus, AlertActionVerificationResult,
+    AlertActionVerificationStatus, create_execution_request, derive_action_outcome,
     evaluate_execution_eligibility, execute_alert_action, verify_execution_result,
 };
 pub use alert_action_preview::{AlertActionPreview, preview_alert_actions};

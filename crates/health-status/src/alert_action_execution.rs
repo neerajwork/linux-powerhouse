@@ -37,6 +37,21 @@ pub struct AlertActionVerificationResult {
     pub message: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize, PartialEq, Eq)]
+pub enum AlertActionOutcomeStatus {
+    Verified,
+    Rejected,
+}
+
+#[derive(Debug, Clone, serde::Serialize, PartialEq, Eq)]
+pub struct AlertActionOutcome {
+    pub action_id: String,
+    pub execution: AlertActionExecutionResult,
+    pub verification: AlertActionVerificationResult,
+    pub status: AlertActionOutcomeStatus,
+    pub message: String,
+}
+
 /// Establish the execution boundary after explicit confirmation.
 pub fn evaluate_execution_eligibility(
     confirmation: &AlertActionConfirmation,
@@ -155,6 +170,42 @@ pub fn verify_execution_result(
         action_id: request.action_id.clone(),
         status: AlertActionVerificationStatus::Passed,
         message: "execution result verified for the requested action.".to_owned(),
+    }
+}
+
+/// Derive the final action outcome from execution and verification evidence.
+///
+/// The caller cannot independently declare an action successful. The final
+/// status is derived from the action identity, execution result, and
+/// verification result.
+pub fn derive_action_outcome(
+    request: &AlertActionExecutionRequest,
+    execution: AlertActionExecutionResult,
+    verification: AlertActionVerificationResult,
+) -> AlertActionOutcome {
+    let action_id = request.action_id.clone();
+
+    let action_matches = execution.action_id == action_id && verification.action_id == action_id;
+
+    let verified = action_matches
+        && execution.executed
+        && verification.status == AlertActionVerificationStatus::Passed;
+
+    AlertActionOutcome {
+        action_id,
+        execution,
+        verification,
+        status: if verified {
+            AlertActionOutcomeStatus::Verified
+        } else {
+            AlertActionOutcomeStatus::Rejected
+        },
+        message: if verified {
+            "action execution and verification produced a verified outcome.".to_owned()
+        } else {
+            "action outcome rejected because execution and verification evidence did not establish a verified result."
+                .to_owned()
+        },
     }
 }
 
@@ -307,6 +358,63 @@ mod tests {
         );
         assert_eq!(result.status, AlertActionVerificationStatus::Failed);
         assert!(result.message.contains("does not match"));
+    }
+
+    #[test]
+    fn matching_execution_and_verification_produce_verified_outcome() {
+        let request = request();
+        let execution = executed_result();
+        let verification = verify_execution_result(&request, &execution);
+
+        let outcome = derive_action_outcome(&request, execution, verification);
+
+        assert_eq!(outcome.status, AlertActionOutcomeStatus::Verified);
+        assert_eq!(outcome.action_id, RECHECK_CONDITION_ACTION_ID);
+    }
+
+    #[test]
+    fn mismatched_execution_result_produces_rejected_outcome() {
+        let request = request();
+        let execution = AlertActionExecutionResult {
+            action_id: "delete-everything".to_owned(),
+            executed: true,
+            message: "completed".to_owned(),
+        };
+        let verification = verify_execution_result(&request, &execution);
+
+        let outcome = derive_action_outcome(&request, execution, verification);
+
+        assert_eq!(outcome.status, AlertActionOutcomeStatus::Rejected);
+    }
+
+    #[test]
+    fn non_executed_result_produces_rejected_outcome() {
+        let request = request();
+        let execution = AlertActionExecutionResult {
+            action_id: RECHECK_CONDITION_ACTION_ID.to_owned(),
+            executed: false,
+            message: "not executed".to_owned(),
+        };
+        let verification = verify_execution_result(&request, &execution);
+
+        let outcome = derive_action_outcome(&request, execution, verification);
+
+        assert_eq!(outcome.status, AlertActionOutcomeStatus::Rejected);
+    }
+
+    #[test]
+    fn failed_verification_produces_rejected_outcome() {
+        let request = request();
+        let execution = executed_result();
+        let verification = AlertActionVerificationResult {
+            action_id: RECHECK_CONDITION_ACTION_ID.to_owned(),
+            status: AlertActionVerificationStatus::Failed,
+            message: "verification failed".to_owned(),
+        };
+
+        let outcome = derive_action_outcome(&request, execution, verification);
+
+        assert_eq!(outcome.status, AlertActionOutcomeStatus::Rejected);
     }
 
     #[test]
