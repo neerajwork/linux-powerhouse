@@ -24,6 +24,19 @@ pub struct AlertActionExecutionResult {
     pub message: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize, PartialEq, Eq)]
+pub enum AlertActionVerificationStatus {
+    Passed,
+    Failed,
+}
+
+#[derive(Debug, Clone, serde::Serialize, PartialEq, Eq)]
+pub struct AlertActionVerificationResult {
+    pub action_id: String,
+    pub status: AlertActionVerificationStatus,
+    pub message: String,
+}
+
 /// Establish the execution boundary after explicit confirmation.
 pub fn evaluate_execution_eligibility(
     confirmation: &AlertActionConfirmation,
@@ -112,6 +125,39 @@ pub fn execute_alert_action(
     })
 }
 
+/// Verify that an execution result belongs to the exact requested action.
+///
+/// Verification is deliberately separate from execution. A successful
+/// execution result is not accepted as proof for a different action, and a
+/// result marked as not executed cannot pass verification.
+pub fn verify_execution_result(
+    request: &AlertActionExecutionRequest,
+    result: &AlertActionExecutionResult,
+) -> AlertActionVerificationResult {
+    if request.action_id != result.action_id {
+        return AlertActionVerificationResult {
+            action_id: request.action_id.clone(),
+            status: AlertActionVerificationStatus::Failed,
+            message: "execution verification failed: result does not match the requested action."
+                .to_owned(),
+        };
+    }
+
+    if !result.executed {
+        return AlertActionVerificationResult {
+            action_id: request.action_id.clone(),
+            status: AlertActionVerificationStatus::Failed,
+            message: "execution verification failed: action was not executed.".to_owned(),
+        };
+    }
+
+    AlertActionVerificationResult {
+        action_id: request.action_id.clone(),
+        status: AlertActionVerificationStatus::Passed,
+        message: "execution result verified for the requested action.".to_owned(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -141,6 +187,20 @@ mod tests {
         }
     }
 
+    fn request() -> AlertActionExecutionRequest {
+        AlertActionExecutionRequest {
+            action_id: RECHECK_CONDITION_ACTION_ID.to_owned(),
+        }
+    }
+
+    fn executed_result() -> AlertActionExecutionResult {
+        AlertActionExecutionResult {
+            action_id: RECHECK_CONDITION_ACTION_ID.to_owned(),
+            executed: true,
+            message: "completed".to_owned(),
+        }
+    }
+
     #[test]
     fn confirmation_alone_is_not_execution_eligible() {
         let result = evaluate_execution_eligibility(&confirmation(true, false, false));
@@ -166,12 +226,10 @@ mod tests {
     #[test]
     fn execution_request_requires_authorization() {
         let confirmation = confirmation(true, true, true);
-
         let result = create_execution_request(
             &confirmation,
             &authorization(RECHECK_CONDITION_ACTION_ID, false),
         );
-
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -182,37 +240,18 @@ mod tests {
     #[test]
     fn execution_request_requires_eligibility() {
         let confirmation = confirmation(true, true, false);
-
         let result = create_execution_request(
             &confirmation,
             &authorization(RECHECK_CONDITION_ACTION_ID, true),
         );
-
         assert!(result.is_err());
     }
 
     #[test]
     fn execution_request_rejects_mismatched_action_ids() {
         let confirmation = confirmation(true, true, true);
-
         let result =
             create_execution_request(&confirmation, &authorization("delete-everything", true));
-
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "authorization does not match the confirmed action"
-        );
-    }
-
-    #[test]
-    fn execution_request_accepts_only_allowlisted_action() {
-        let confirmation = confirmation(true, true, true);
-        let mut authorization = authorization(RECHECK_CONDITION_ACTION_ID, true);
-        authorization.action_id = "delete-everything".to_owned();
-
-        let result = create_execution_request(&confirmation, &authorization);
-
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -224,10 +263,8 @@ mod tests {
     fn execution_request_rejects_unknown_confirmed_action() {
         let mut confirmation = confirmation(true, true, true);
         confirmation.action_id = "delete-everything".to_owned();
-
         let result =
             create_execution_request(&confirmation, &authorization("delete-everything", true));
-
         assert!(result.is_err());
         assert!(
             result
@@ -238,24 +275,51 @@ mod tests {
 
     #[test]
     fn allowed_action_executes_without_privilege() {
-        let request = AlertActionExecutionRequest {
-            action_id: RECHECK_CONDITION_ACTION_ID.to_owned(),
-        };
-
-        let result = execute_alert_action(&request).expect("allowlisted action should execute");
-
+        let result = execute_alert_action(&request()).expect("allowlisted action should execute");
         assert!(result.executed);
         assert_eq!(result.action_id, RECHECK_CONDITION_ACTION_ID);
     }
 
     #[test]
     fn unknown_action_cannot_execute_directly() {
-        let request = AlertActionExecutionRequest {
+        let result = execute_alert_action(&AlertActionExecutionRequest {
             action_id: "delete-everything".to_owned(),
-        };
-
-        let result = execute_alert_action(&request);
-
+        });
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn matching_executed_result_passes_verification() {
+        let result = verify_execution_result(&request(), &executed_result());
+        assert_eq!(result.status, AlertActionVerificationStatus::Passed);
+        assert_eq!(result.action_id, RECHECK_CONDITION_ACTION_ID);
+    }
+
+    #[test]
+    fn mismatched_result_fails_verification() {
+        let result = verify_execution_result(
+            &request(),
+            &AlertActionExecutionResult {
+                action_id: "delete-everything".to_owned(),
+                executed: true,
+                message: "completed".to_owned(),
+            },
+        );
+        assert_eq!(result.status, AlertActionVerificationStatus::Failed);
+        assert!(result.message.contains("does not match"));
+    }
+
+    #[test]
+    fn non_executed_result_fails_verification() {
+        let result = verify_execution_result(
+            &request(),
+            &AlertActionExecutionResult {
+                action_id: RECHECK_CONDITION_ACTION_ID.to_owned(),
+                executed: false,
+                message: "not executed".to_owned(),
+            },
+        );
+        assert_eq!(result.status, AlertActionVerificationStatus::Failed);
+        assert!(result.message.contains("was not executed"));
     }
 }

@@ -16,7 +16,11 @@ pub mod alerts;
 pub mod performance;
 pub use alert_action_authorization::{AlertActionAuthorization, authorize_alert_action};
 pub use alert_action_confirmation::{AlertActionConfirmation, confirm_alert_action};
-pub use alert_action_execution::{AlertActionExecutionEligibility, evaluate_execution_eligibility};
+pub use alert_action_execution::{
+    AlertActionExecutionEligibility, AlertActionExecutionRequest, AlertActionExecutionResult,
+    AlertActionVerificationResult, AlertActionVerificationStatus, create_execution_request,
+    evaluate_execution_eligibility, execute_alert_action, verify_execution_result,
+};
 pub use alert_action_preview::{AlertActionPreview, preview_alert_actions};
 pub use alert_correlation::{AlertPerformanceCorrelation, correlate_alert};
 pub use alert_explanation::{AlertExplanation, explain_alert};

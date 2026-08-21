@@ -42,6 +42,8 @@ mod tests {
         let mut history = AlertEventHistory::new(2);
         history.record(AlertEvent {
             timestamp_ms: 123,
+            performance_timestamp_ms: None,
+            process_evidence: Vec::new(),
             kind: SignalKind::Cpu,
             severity: AlertSeverity::Warning,
             value: 85.0,
