@@ -266,9 +266,11 @@ mod tests {
         let result =
             create_execution_request(&confirmation, &authorization("delete-everything", true));
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("action is not supported by the current execution capability set"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("action is not supported by the current execution capability set")
+        );
     }
 
     #[test]
