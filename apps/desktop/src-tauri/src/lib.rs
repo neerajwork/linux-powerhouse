@@ -17,10 +17,11 @@ use execution_engine::{
     execute_system_status, execute_unified_system_intelligence,
 };
 use health_status::{
-    AlertActionConfirmation, AlertActionPreview, AlertDecision, AlertEvent, AlertEventHistory,
-    AlertGuidance, AlertState, HealthLevel, HealthSnapshot, PerformanceAnomalyReport, SignalKind,
-    alert_decision, confirm_alert_action, create_alert_event, explain_performance, guide_alert,
-    preview_alert_actions,
+    AlertActionConfirmation, AlertActionExecutionRequest, AlertActionExecutionResult,
+    AlertActionPreview, AlertDecision, AlertEvent, AlertEventHistory, AlertGuidance, AlertState,
+    HealthLevel, HealthSnapshot, PerformanceAnomalyReport, SignalKind, alert_decision,
+    confirm_alert_action, create_alert_event, derive_action_outcome, explain_performance,
+    guide_alert, preview_alert_actions,
 };
 use monitoring::{Monitor, MonitorSnapshot, PerformanceHistoryComparison};
 use network_intelligence::NetworkAnalysis;
@@ -210,6 +211,31 @@ fn safe_system_action(
             let verification = verify_safe_action(&action_name, true);
             result.verification_status = verification.status.clone();
             result.verification_message = verification.message.clone();
+
+            let execution = AlertActionExecutionResult {
+                action_id: action_name.clone(),
+                executed: true,
+                message: result.message.clone(),
+            };
+
+            let execution_request = AlertActionExecutionRequest {
+                action_id: action_name.clone(),
+            };
+
+            let outcome = derive_action_outcome(
+                &execution_request,
+                execution,
+                health_status::AlertActionVerificationResult {
+                    action_id: action_name.clone(),
+                    status: if verification.status == "verified" {
+                        health_status::AlertActionVerificationStatus::Passed
+                    } else {
+                        health_status::AlertActionVerificationStatus::Failed
+                    },
+                    message: verification.message.clone(),
+                },
+            );
+
             state.audit.record(
                 &action_name,
                 "verified",
@@ -220,11 +246,32 @@ fn safe_system_action(
                 &result.privilege,
                 &verification.status,
                 &verification.message,
+                &outcome,
             )?;
+
             Ok(result)
         }
         Err(error) => {
             let verification = verify_safe_action(&action_name, false);
+
+            let execution = AlertActionExecutionResult {
+                action_id: action_name.clone(),
+                executed: false,
+                message: error.clone(),
+            };
+
+            let execution_request = AlertActionExecutionRequest {
+                action_id: action_name.clone(),
+            };
+
+            let verification_result = health_status::AlertActionVerificationResult {
+                action_id: action_name.clone(),
+                status: health_status::AlertActionVerificationStatus::Failed,
+                message: verification.message.clone(),
+            };
+
+            let outcome = derive_action_outcome(&execution_request, execution, verification_result);
+
             let _ = state.audit.record(
                 &action_name,
                 "failed",
@@ -235,12 +282,13 @@ fn safe_system_action(
                 "Unknown",
                 &verification.status,
                 &verification.message,
+                &outcome,
             );
+
             Err(error)
         }
     }
 }
-
 #[tauri::command]
 fn action_audit_history(
     state: tauri::State<'_, AppState>,
