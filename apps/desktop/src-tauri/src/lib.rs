@@ -210,6 +210,7 @@ fn safe_system_action(
             let verification = verify_safe_action(&action_name, true);
             result.verification_status = verification.status.clone();
             result.verification_message = verification.message.clone();
+
             state.audit.record(
                 &action_name,
                 "verified",
@@ -220,11 +221,15 @@ fn safe_system_action(
                 &result.privilege,
                 &verification.status,
                 &verification.message,
+                "verified",
+                "action execution and verification produced a verified outcome.",
             )?;
+
             Ok(result)
         }
         Err(error) => {
             let verification = verify_safe_action(&action_name, false);
+
             let _ = state.audit.record(
                 &action_name,
                 "failed",
@@ -235,12 +240,14 @@ fn safe_system_action(
                 "Unknown",
                 &verification.status,
                 &verification.message,
+                "rejected",
+                "action outcome rejected because execution and verification evidence did not establish a verified result.",
             );
+
             Err(error)
         }
     }
 }
-
 #[tauri::command]
 fn action_audit_history(
     state: tauri::State<'_, AppState>,
