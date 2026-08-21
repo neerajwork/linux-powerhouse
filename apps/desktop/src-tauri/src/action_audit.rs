@@ -1,3 +1,4 @@
+use health_status::AlertActionOutcome;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
@@ -48,8 +49,7 @@ impl ActionAudit {
         privilege: &str,
         verification_status: &str,
         verification_message: &str,
-        outcome_status: &str,
-        outcome_message: &str,
+        outcome: &AlertActionOutcome,
     ) -> Result<ActionAuditEntry, String> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -67,8 +67,8 @@ impl ActionAudit {
             privilege: privilege.to_owned(),
             verification_status: verification_status.to_owned(),
             verification_message: verification_message.to_owned(),
-            outcome_status: outcome_status.to_owned(),
-            outcome_message: outcome_message.to_owned(),
+            outcome_status: format!("{:?}", outcome.status).to_lowercase(),
+            outcome_message: outcome.message.clone(),
         };
         let path = audit_path()?;
         if let Some(parent) = path.parent() {
