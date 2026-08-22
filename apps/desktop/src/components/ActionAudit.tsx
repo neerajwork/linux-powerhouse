@@ -13,6 +13,8 @@ type AuditEntry = {
   privilege: string;
   verification_status?: string;
   verification_message?: string;
+  outcome_status?: string;
+  outcome_message?: string;
 };
 
 type RemediationSuggestion = {
@@ -80,8 +82,8 @@ export function ActionAudit() {
         <span className="label">ACTION AUDIT</span>
         <strong>{entries.length} recorded actions</strong>
         <span>
-          Local, append-oriented execution history with outcome verification and safe follow-up
-          suggestions. No automatic remediation or remote telemetry.
+          Local, append-oriented execution history with independently recorded execution,
+          verification, and derived outcome evidence. No automatic remediation or remote telemetry.
         </span>
       </div>
       {loading && <p className="muted">Loading audit history…</p>}
@@ -99,11 +101,17 @@ export function ActionAudit() {
             <span>
               {new Date(entry.timestamp).toLocaleString()} · {entry.stage} · {entry.confirmed ? "confirmed" : "not confirmed"}
             </span>
-            <span>{entry.message}</span>
+            <span>Execution: {entry.status} · {entry.message}</span>
             {entry.verification_status && entry.verification_status !== "legacy" && (
               <span>
-                Outcome: {entry.verification_status}
+                Verification: {entry.verification_status}
                 {entry.verification_message ? ` · ${entry.verification_message}` : ""}
+              </span>
+            )}
+            {entry.outcome_status && entry.outcome_status !== "legacy" && (
+              <span>
+                Outcome: {entry.outcome_status}
+                {entry.outcome_message ? ` · ${entry.outcome_message}` : ""}
               </span>
             )}
             {!!suggestions[entry.id]?.length && (
@@ -117,7 +125,7 @@ export function ActionAudit() {
               </div>
             )}
           </div>
-          <b>{entry.status}</b>
+          <b>{entry.outcome_status && entry.outcome_status !== "legacy" ? entry.outcome_status : entry.status}</b>
         </article>
       ))}
     </section>

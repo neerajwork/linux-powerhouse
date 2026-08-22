@@ -1,4 +1,4 @@
-use health_status::AlertActionOutcome;
+use health_status::{AlertActionOutcome, AlertActionOutcomeStatus};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
@@ -34,6 +34,13 @@ fn default_outcome_status() -> String {
     "legacy".to_owned()
 }
 
+fn outcome_status_label(status: &AlertActionOutcomeStatus) -> &'static str {
+    match status {
+        AlertActionOutcomeStatus::Verified => "verified",
+        AlertActionOutcomeStatus::Rejected => "rejected",
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
@@ -67,7 +74,7 @@ impl ActionAudit {
             privilege: privilege.to_owned(),
             verification_status: verification_status.to_owned(),
             verification_message: verification_message.to_owned(),
-            outcome_status: format!("{:?}", outcome.status).to_lowercase(),
+            outcome_status: outcome_status_label(&outcome.status).to_owned(),
             outcome_message: outcome.message.clone(),
         };
         let path = audit_path()?;
@@ -120,4 +127,21 @@ fn audit_path() -> Result<PathBuf, String> {
             .join("action-audit.jsonl"));
     }
     Err("unable to determine a local state directory for the action audit".to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn outcome_status_uses_explicit_stable_labels() {
+        assert_eq!(
+            outcome_status_label(&AlertActionOutcomeStatus::Verified),
+            "verified"
+        );
+        assert_eq!(
+            outcome_status_label(&AlertActionOutcomeStatus::Rejected),
+            "rejected"
+        );
+    }
 }
