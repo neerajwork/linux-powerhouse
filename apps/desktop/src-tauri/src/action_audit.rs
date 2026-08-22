@@ -135,7 +135,13 @@ mod tests {
 
     #[test]
     fn outcome_status_uses_explicit_stable_labels() {
-        assert_eq!(outcome_status_label(&AlertActionOutcomeStatus::Verified), "verified");
-        assert_eq!(outcome_status_label(&AlertActionOutcomeStatus::Rejected), "rejected");
+        assert_eq!(
+            outcome_status_label(&AlertActionOutcomeStatus::Verified),
+            "verified"
+        );
+        assert_eq!(
+            outcome_status_label(&AlertActionOutcomeStatus::Rejected),
+            "rejected"
+        );
     }
 }
