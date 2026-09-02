@@ -4,6 +4,7 @@ use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActionAuditEntry {
@@ -24,6 +25,10 @@ pub struct ActionAuditEntry {
     pub outcome_status: String,
     #[serde(default)]
     pub outcome_message: String,
+}
+
+fn audit_id() -> String {
+    format!("action-{}", Uuid::new_v4())
 }
 
 fn default_verification_status() -> String {
@@ -63,7 +68,7 @@ impl ActionAudit {
             .map_err(|_| "system clock is before the Unix epoch".to_owned())?
             .as_millis() as u64;
         let entry = ActionAuditEntry {
-            id: format!("action-{timestamp}"),
+            id: audit_id(),
             timestamp,
             action: action.to_owned(),
             stage: stage.to_owned(),
@@ -132,6 +137,16 @@ fn audit_path() -> Result<PathBuf, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn audit_ids_are_unique_and_use_the_action_prefix() {
+        let first = audit_id();
+        let second = audit_id();
+
+        assert_ne!(first, second);
+        assert!(first.starts_with("action-"));
+        assert!(second.starts_with("action-"));
+    }
 
     #[test]
     fn outcome_status_uses_explicit_stable_labels() {
