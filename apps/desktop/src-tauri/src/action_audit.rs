@@ -103,19 +103,25 @@ impl ActionAudit {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
             Err(error) => return Err(error.to_string()),
         };
-        let mut entries = Vec::new();
-        for line in BufReader::new(file).lines() {
-            let line = line.map_err(|error| error.to_string())?;
-            if line.trim().is_empty() {
-                continue;
-            }
-            entries.push(
-                serde_json::from_str::<ActionAuditEntry>(&line)
-                    .map_err(|error| format!("invalid audit record: {error}"))?,
-            );
-        }
-        Ok(entries)
+        parse_audit_entries(BufReader::new(file))
     }
+}
+
+fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, String> {
+    let mut entries = Vec::new();
+
+    for line in reader.lines() {
+        let line = line.map_err(|error| error.to_string())?;
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        if let Ok(entry) = serde_json::from_str::<ActionAuditEntry>(&line) {
+            entries.push(entry);
+        }
+    }
+
+    Ok(entries)
 }
 
 fn audit_path() -> Result<PathBuf, String> {
@@ -137,6 +143,49 @@ fn audit_path() -> Result<PathBuf, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
+
+    fn test_audit_entry(id: &str) -> ActionAuditEntry {
+        ActionAuditEntry {
+            id: id.to_owned(),
+            timestamp: 123,
+            action: "test_action".to_owned(),
+            stage: "test_stage".to_owned(),
+            confirmed: true,
+            status: "success".to_owned(),
+            message: "test message".to_owned(),
+            reversible: true,
+            privilege: "none".to_owned(),
+            verification_status: "verified".to_owned(),
+            verification_message: "verified".to_owned(),
+            outcome_status: "verified".to_owned(),
+            outcome_message: "outcome verified".to_owned(),
+        }
+    }
+
+    #[test]
+    fn malformed_audit_records_do_not_hide_valid_history() {
+        let first = serde_json::to_string(&test_audit_entry("first")).unwrap();
+        let second = serde_json::to_string(&test_audit_entry("second")).unwrap();
+        let input = format!("{first}\nnot valid json\n{second}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "first");
+        assert_eq!(entries[1].id, "second");
+    }
+
+    #[test]
+    fn empty_audit_lines_are_ignored() {
+        let entry = serde_json::to_string(&test_audit_entry("first")).unwrap();
+        let input = format!("\n{entry}\n\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "first");
+    }
 
     #[test]
     fn audit_ids_are_unique_and_use_the_action_prefix() {
