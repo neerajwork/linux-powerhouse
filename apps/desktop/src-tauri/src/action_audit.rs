@@ -1,5 +1,6 @@
 use health_status::{AlertActionOutcome, AlertActionOutcomeStatus};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -109,6 +110,7 @@ impl ActionAudit {
 
 fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, String> {
     let mut entries = Vec::new();
+    let mut seen_ids = HashSet::new();
 
     for line in reader.lines() {
         let line = line.map_err(|error| error.to_string())?;
@@ -117,7 +119,9 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
         }
 
         if let Ok(entry) = serde_json::from_str::<ActionAuditEntry>(&line) {
-            entries.push(entry);
+            if seen_ids.insert(entry.id.clone()) {
+                entries.push(entry);
+            }
         }
     }
 
@@ -185,6 +189,20 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "first");
+    }
+
+    #[test]
+    fn duplicate_audit_ids_do_not_hide_unique_history() {
+        let first = serde_json::to_string(&test_audit_entry("first")).unwrap();
+        let duplicate = serde_json::to_string(&test_audit_entry("first")).unwrap();
+        let second = serde_json::to_string(&test_audit_entry("second")).unwrap();
+        let input = format!("{first}\n{duplicate}\n{second}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "first");
+        assert_eq!(entries[1].id, "second");
     }
 
     #[test]
