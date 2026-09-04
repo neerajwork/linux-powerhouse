@@ -119,7 +119,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
         }
 
         if let Ok(entry) = serde_json::from_str::<ActionAuditEntry>(&line) {
-            if seen_ids.insert(entry.id.clone()) {
+            if !entry.id.trim().is_empty() && seen_ids.insert(entry.id.clone()) {
                 entries.push(entry);
             }
         }
@@ -203,6 +203,19 @@ mod tests {
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].id, "first");
         assert_eq!(entries[1].id, "second");
+    }
+
+    #[test]
+    fn empty_audit_ids_are_ignored_without_hiding_valid_history() {
+        let empty = serde_json::to_string(&test_audit_entry("")).unwrap();
+        let whitespace = serde_json::to_string(&test_audit_entry("   ")).unwrap();
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{empty}\n{whitespace}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
     }
 
     #[test]
