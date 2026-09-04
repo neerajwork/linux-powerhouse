@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ActionAuditEntry {
     pub id: String,
     pub timestamp: u64,
@@ -243,6 +243,24 @@ mod tests {
         assert_ne!(first, second);
         assert!(first.starts_with("action-"));
         assert!(second.starts_with("action-"));
+    }
+
+    #[test]
+    fn recorded_audit_entries_round_trip_through_persistence_format() {
+        let entry = test_audit_entry("round-trip");
+        let line = serde_json::to_string(&entry).unwrap();
+        let root = std::env::temp_dir().join(format!("linux-powerhouse-audit-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, format!("{line}\n")).unwrap();
+
+        let contents = std::fs::File::open(&file).unwrap();
+        let history = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(history, vec![entry]);
+
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
