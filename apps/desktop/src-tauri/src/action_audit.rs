@@ -121,6 +121,8 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
         if let Ok(entry) = serde_json::from_str::<ActionAuditEntry>(&line) {
             if entry.timestamp > 0
                 && !entry.id.trim().is_empty()
+                && !entry.action.trim().is_empty()
+                && !entry.stage.trim().is_empty()
                 && seen_ids.insert(entry.id.clone())
             {
                 entries.push(entry);
@@ -228,6 +230,44 @@ mod tests {
         let invalid = serde_json::to_string(&invalid_entry).unwrap();
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
         let input = format!("{invalid}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn blank_audit_actions_are_ignored_without_hiding_valid_history() {
+        let mut empty_entry = test_audit_entry("empty-action");
+        empty_entry.action = "".to_owned();
+        let empty = serde_json::to_string(&empty_entry).unwrap();
+
+        let mut whitespace_entry = test_audit_entry("whitespace-action");
+        whitespace_entry.action = "   ".to_owned();
+        let whitespace = serde_json::to_string(&whitespace_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{empty}\n{whitespace}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn blank_audit_stages_are_ignored_without_hiding_valid_history() {
+        let mut empty_entry = test_audit_entry("empty-stage");
+        empty_entry.stage = "".to_owned();
+        let empty = serde_json::to_string(&empty_entry).unwrap();
+
+        let mut whitespace_entry = test_audit_entry("whitespace-stage");
+        whitespace_entry.stage = "   ".to_owned();
+        let whitespace = serde_json::to_string(&whitespace_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{empty}\n{whitespace}\n{valid}\n");
 
         let entries = parse_audit_entries(Cursor::new(input)).unwrap();
 
