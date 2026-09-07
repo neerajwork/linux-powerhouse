@@ -47,6 +47,10 @@ fn outcome_status_label(status: &AlertActionOutcomeStatus) -> &'static str {
     }
 }
 
+fn is_valid_outcome_status(status: &str) -> bool {
+    matches!(status, "legacy" | "verified" | "rejected")
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
@@ -129,7 +133,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && !entry.verification_status.trim().is_empty()
                 && (entry.verification_status == "legacy"
                     || !entry.verification_message.trim().is_empty())
-                && !entry.outcome_status.trim().is_empty()
+                && is_valid_outcome_status(&entry.outcome_status)
                 && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
                 && seen_ids.insert(entry.id.clone())
             {
@@ -395,6 +399,27 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn unknown_audit_outcome_statuses_are_ignored_without_hiding_valid_history() {
+        let mut unknown_entry = test_audit_entry("unknown-outcome-status");
+        unknown_entry.outcome_status = "unknown".to_owned();
+        let unknown = serde_json::to_string(&unknown_entry).unwrap();
+
+        let verified = serde_json::to_string(&test_audit_entry("verified")).unwrap();
+
+        let mut rejected_entry = test_audit_entry("rejected");
+        rejected_entry.outcome_status = "rejected".to_owned();
+        let rejected = serde_json::to_string(&rejected_entry).unwrap();
+
+        let input = format!("{unknown}\n{verified}\n{rejected}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "verified");
+        assert_eq!(entries[1].id, "rejected");
     }
 
     #[test]
