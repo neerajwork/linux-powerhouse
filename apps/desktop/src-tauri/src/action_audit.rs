@@ -127,9 +127,10 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && !entry.message.trim().is_empty()
                 && !entry.privilege.trim().is_empty()
                 && !entry.verification_status.trim().is_empty()
-                && !entry.verification_message.trim().is_empty()
+                && (entry.verification_status == "legacy"
+                    || !entry.verification_message.trim().is_empty())
                 && !entry.outcome_status.trim().is_empty()
-                && !entry.outcome_message.trim().is_empty()
+                && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
                 && seen_ids.insert(entry.id.clone())
             {
                 entries.push(entry);
@@ -413,6 +414,20 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn legacy_audit_records_remain_visible_when_newer_fields_are_missing() {
+        let input = r#"{"id":"legacy","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none"}"#;
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "legacy");
+        assert_eq!(entries[0].verification_status, "legacy");
+        assert_eq!(entries[0].verification_message, "");
+        assert_eq!(entries[0].outcome_status, "legacy");
+        assert_eq!(entries[0].outcome_message, "");
     }
 
     #[test]
