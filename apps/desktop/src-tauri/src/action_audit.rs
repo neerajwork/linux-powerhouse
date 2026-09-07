@@ -129,6 +129,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && !entry.verification_status.trim().is_empty()
                 && !entry.verification_message.trim().is_empty()
                 && !entry.outcome_status.trim().is_empty()
+                && !entry.outcome_message.trim().is_empty()
                 && seen_ids.insert(entry.id.clone())
             {
                 entries.push(entry);
@@ -384,6 +385,25 @@ mod tests {
 
         let mut whitespace_entry = test_audit_entry("whitespace-outcome-status");
         whitespace_entry.outcome_status = "   ".to_owned();
+        let whitespace = serde_json::to_string(&whitespace_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{empty}\n{whitespace}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn blank_audit_outcome_messages_are_ignored_without_hiding_valid_history() {
+        let mut empty_entry = test_audit_entry("empty-outcome-message");
+        empty_entry.outcome_message = "".to_owned();
+        let empty = serde_json::to_string(&empty_entry).unwrap();
+
+        let mut whitespace_entry = test_audit_entry("whitespace-outcome-message");
+        whitespace_entry.outcome_message = "   ".to_owned();
         let whitespace = serde_json::to_string(&whitespace_entry).unwrap();
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
