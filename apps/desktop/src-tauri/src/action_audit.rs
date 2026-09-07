@@ -123,6 +123,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && !entry.id.trim().is_empty()
                 && !entry.action.trim().is_empty()
                 && !entry.stage.trim().is_empty()
+                && !entry.status.trim().is_empty()
                 && seen_ids.insert(entry.id.clone())
             {
                 entries.push(entry);
@@ -264,6 +265,25 @@ mod tests {
 
         let mut whitespace_entry = test_audit_entry("whitespace-stage");
         whitespace_entry.stage = "   ".to_owned();
+        let whitespace = serde_json::to_string(&whitespace_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{empty}\n{whitespace}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn blank_audit_statuses_are_ignored_without_hiding_valid_history() {
+        let mut empty_entry = test_audit_entry("empty-status");
+        empty_entry.status = "".to_owned();
+        let empty = serde_json::to_string(&empty_entry).unwrap();
+
+        let mut whitespace_entry = test_audit_entry("whitespace-status");
+        whitespace_entry.status = "   ".to_owned();
         let whitespace = serde_json::to_string(&whitespace_entry).unwrap();
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
