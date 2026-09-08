@@ -59,6 +59,10 @@ fn is_valid_stage(stage: &str) -> bool {
     matches!(stage, "verified" | "failed")
 }
 
+fn is_valid_privilege(privilege: &str) -> bool {
+    matches!(privilege, "none" | "None" | "Unknown")
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
@@ -137,7 +141,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
                 && !entry.status.trim().is_empty()
                 && !entry.message.trim().is_empty()
-                && !entry.privilege.trim().is_empty()
+                && is_valid_privilege(&entry.privilege)
                 && is_valid_verification_status(&entry.verification_status)
                 && (entry.verification_status == "legacy"
                     || !entry.verification_message.trim().is_empty())
@@ -373,6 +377,30 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn unknown_audit_privileges_are_ignored_without_hiding_valid_history() {
+        let mut unknown_entry = test_audit_entry("unknown-privilege");
+        unknown_entry.privilege = "admin".to_owned();
+        let unknown = serde_json::to_string(&unknown_entry).unwrap();
+
+        let mut current_entry = test_audit_entry("current-privilege");
+        current_entry.privilege = "None".to_owned();
+        let current = serde_json::to_string(&current_entry).unwrap();
+
+        let mut failed_entry = test_audit_entry("unknown-privilege");
+        failed_entry.id = "failed-privilege".to_owned();
+        failed_entry.privilege = "Unknown".to_owned();
+        let failed = serde_json::to_string(&failed_entry).unwrap();
+
+        let input = format!("{unknown}\n{current}\n{failed}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "current-privilege");
+        assert_eq!(entries[1].id, "failed-privilege");
     }
 
     #[test]
