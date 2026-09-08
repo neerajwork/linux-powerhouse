@@ -55,6 +55,10 @@ fn is_valid_verification_status(status: &str) -> bool {
     matches!(status, "legacy" | "verified")
 }
 
+fn is_valid_stage(stage: &str) -> bool {
+    matches!(stage, "verified" | "failed")
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
@@ -130,7 +134,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
             if entry.timestamp > 0
                 && !entry.id.trim().is_empty()
                 && !entry.action.trim().is_empty()
-                && !entry.stage.trim().is_empty()
+                && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
                 && !entry.status.trim().is_empty()
                 && !entry.message.trim().is_empty()
                 && !entry.privilege.trim().is_empty()
@@ -175,7 +179,7 @@ mod tests {
             id: id.to_owned(),
             timestamp: 123,
             action: "test_action".to_owned(),
-            stage: "test_stage".to_owned(),
+            stage: "verified".to_owned(),
             confirmed: true,
             status: "success".to_owned(),
             message: "test message".to_owned(),
@@ -289,6 +293,29 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn unknown_audit_stages_are_ignored_without_hiding_valid_history() {
+        let mut unknown_entry = test_audit_entry("unknown-stage");
+        unknown_entry.stage = "unknown".to_owned();
+        let unknown = serde_json::to_string(&unknown_entry).unwrap();
+
+        let mut verified_entry = test_audit_entry("verified");
+        verified_entry.stage = "verified".to_owned();
+        let verified = serde_json::to_string(&verified_entry).unwrap();
+
+        let mut failed_entry = test_audit_entry("failed");
+        failed_entry.stage = "failed".to_owned();
+        let failed = serde_json::to_string(&failed_entry).unwrap();
+
+        let input = format!("{unknown}\n{verified}\n{failed}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "verified");
+        assert_eq!(entries[1].id, "failed");
     }
 
     #[test]
