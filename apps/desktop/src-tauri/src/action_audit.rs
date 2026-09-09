@@ -59,6 +59,17 @@ fn is_valid_stage(stage: &str) -> bool {
     matches!(stage, "verified" | "failed")
 }
 
+fn is_valid_action(action: &str) -> bool {
+    matches!(
+        action,
+        "refresh_health"
+            | "storage_diagnostic"
+            | "process_diagnostic"
+            | "network_diagnostic"
+            | "service_diagnostic"
+    )
+}
+
 fn is_valid_privilege(privilege: &str) -> bool {
     matches!(privilege, "none" | "None" | "Unknown")
 }
@@ -138,6 +149,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
             if entry.timestamp > 0
                 && !entry.id.trim().is_empty()
                 && !entry.action.trim().is_empty()
+                && (entry.verification_status == "legacy" || is_valid_action(&entry.action))
                 && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
                 && !entry.status.trim().is_empty()
                 && !entry.message.trim().is_empty()
@@ -182,7 +194,7 @@ mod tests {
         ActionAuditEntry {
             id: id.to_owned(),
             timestamp: 123,
-            action: "test_action".to_owned(),
+            action: "refresh_health".to_owned(),
             stage: "verified".to_owned(),
             confirmed: true,
             status: "success".to_owned(),
@@ -278,6 +290,40 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn unknown_audit_actions_are_ignored_without_hiding_valid_history() {
+        let mut unknown_entry = test_audit_entry("unknown-action");
+        unknown_entry.action = "unknown_action".to_owned();
+        let unknown = serde_json::to_string(&unknown_entry).unwrap();
+
+        let actions = [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ];
+
+        let valid = actions
+            .iter()
+            .enumerate()
+            .map(|(index, action)| {
+                let mut entry = test_audit_entry(&format!("valid-action-{index}"));
+                entry.action = (*action).to_owned();
+                serde_json::to_string(&entry).unwrap()
+            })
+            .collect::<Vec<_>>();
+
+        let input = format!("{unknown}\n{}\n", valid.join("\n"));
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), actions.len());
+        for (entry, action) in entries.iter().zip(actions) {
+            assert_eq!(entry.action, action);
+        }
     }
 
     #[test]
