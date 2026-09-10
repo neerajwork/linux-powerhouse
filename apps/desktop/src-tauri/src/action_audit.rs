@@ -151,6 +151,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && !entry.action.trim().is_empty()
                 && (entry.verification_status == "legacy" || is_valid_action(&entry.action))
                 && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
+                && (entry.verification_status == "legacy" || entry.confirmed)
                 && !entry.status.trim().is_empty()
                 && !entry.message.trim().is_empty()
                 && is_valid_privilege(&entry.privilege)
@@ -366,6 +367,21 @@ mod tests {
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].id, "verified");
         assert_eq!(entries[1].id, "failed");
+    }
+
+    #[test]
+    fn unconfirmed_audit_records_are_ignored_without_hiding_valid_history() {
+        let mut unconfirmed_entry = test_audit_entry("unconfirmed");
+        unconfirmed_entry.confirmed = false;
+        let unconfirmed = serde_json::to_string(&unconfirmed_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{unconfirmed}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
     }
 
     #[test]
