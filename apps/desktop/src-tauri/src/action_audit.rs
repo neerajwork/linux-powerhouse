@@ -63,6 +63,13 @@ fn is_valid_status(status: &str) -> bool {
     matches!(status, "success" | "completed" | "failed")
 }
 
+fn is_valid_stage_status(stage: &str, status: &str) -> bool {
+    matches!(
+        (stage, status),
+        ("verified", "success" | "completed") | ("failed", "failed")
+    )
+}
+
 fn is_valid_action(action: &str) -> bool {
     matches!(
         action,
@@ -155,6 +162,8 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && !entry.action.trim().is_empty()
                 && (entry.verification_status == "legacy" || is_valid_action(&entry.action))
                 && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
+                && (entry.verification_status == "legacy"
+                    || is_valid_stage_status(&entry.stage, &entry.status))
                 && (entry.verification_status == "legacy" || entry.confirmed)
                 && is_valid_status(&entry.status)
                 && !entry.message.trim().is_empty()
@@ -362,6 +371,7 @@ mod tests {
 
         let mut failed_entry = test_audit_entry("failed");
         failed_entry.stage = "failed".to_owned();
+        failed_entry.status = "failed".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
         let input = format!("{unknown}\n{verified}\n{failed}\n");
@@ -408,6 +418,52 @@ mod tests {
     }
 
     #[test]
+    fn inconsistent_audit_stage_statuses_are_ignored_without_hiding_valid_history() {
+        let mut verified_failed_entry = test_audit_entry("verified-failed");
+        verified_failed_entry.stage = "verified".to_owned();
+        verified_failed_entry.status = "failed".to_owned();
+        let verified_failed = serde_json::to_string(&verified_failed_entry).unwrap();
+
+        let mut failed_success_entry = test_audit_entry("failed-success");
+        failed_success_entry.stage = "failed".to_owned();
+        failed_success_entry.status = "success".to_owned();
+        let failed_success = serde_json::to_string(&failed_success_entry).unwrap();
+
+        let mut failed_completed_entry = test_audit_entry("failed-completed");
+        failed_completed_entry.stage = "failed".to_owned();
+        failed_completed_entry.status = "completed".to_owned();
+        let failed_completed = serde_json::to_string(&failed_completed_entry).unwrap();
+
+        let mut verified_success_entry = test_audit_entry("verified-success");
+        verified_success_entry.stage = "verified".to_owned();
+        verified_success_entry.status = "success".to_owned();
+        let verified_success = serde_json::to_string(&verified_success_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("verified-completed")).unwrap();
+
+        let mut failed_failed_entry = test_audit_entry("failed-failed");
+        failed_failed_entry.stage = "failed".to_owned();
+        failed_failed_entry.status = "failed".to_owned();
+        let failed_failed = serde_json::to_string(&failed_failed_entry).unwrap();
+
+        let input = format!(
+            "{verified_failed}\n\
+             {failed_success}\n\
+             {failed_completed}\n\
+             {verified_success}\n\
+             {valid}\n\
+             {failed_failed}\n"
+        );
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].id, "verified-success");
+        assert_eq!(entries[1].id, "verified-completed");
+        assert_eq!(entries[2].id, "failed-failed");
+    }
+
+    #[test]
     fn unknown_audit_statuses_are_ignored_without_hiding_valid_history() {
         let mut unknown_entry = test_audit_entry("unknown-status");
         unknown_entry.status = "unknown".to_owned();
@@ -422,6 +478,7 @@ mod tests {
         let completed = serde_json::to_string(&completed_entry).unwrap();
 
         let mut failed_entry = test_audit_entry("failed-status");
+        failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
