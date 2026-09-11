@@ -55,6 +55,13 @@ fn is_valid_verification_status(status: &str) -> bool {
     matches!(status, "legacy" | "verified")
 }
 
+fn is_valid_verification_outcome_status(verification_status: &str, outcome_status: &str) -> bool {
+    matches!(
+        (verification_status, outcome_status),
+        ("verified", "verified")
+    )
+}
+
 fn is_valid_stage(stage: &str) -> bool {
     matches!(stage, "verified" | "failed")
 }
@@ -172,6 +179,12 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && (entry.verification_status == "legacy"
                     || !entry.verification_message.trim().is_empty())
                 && is_valid_outcome_status(&entry.outcome_status)
+                && (entry.verification_status == "legacy"
+                    || entry.outcome_status == "legacy"
+                    || is_valid_verification_outcome_status(
+                        &entry.verification_status,
+                        &entry.outcome_status,
+                    ))
                 && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
                 && seen_ids.insert(entry.id.clone())
             {
@@ -612,6 +625,24 @@ mod tests {
     }
 
     #[test]
+    fn inconsistent_audit_verification_outcome_statuses_are_ignored_without_hiding_valid_history() {
+        let mut verified_rejected_entry = test_audit_entry("verified-rejected");
+        verified_rejected_entry.verification_status = "verified".to_owned();
+        verified_rejected_entry.outcome_status = "rejected".to_owned();
+        let verified_rejected = serde_json::to_string(&verified_rejected_entry).unwrap();
+
+        let verified_verified =
+            serde_json::to_string(&test_audit_entry("verified-verified")).unwrap();
+
+        let input = format!("{verified_rejected}\n{verified_verified}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "verified-verified");
+    }
+
+    #[test]
     fn unknown_audit_verification_statuses_are_ignored_without_hiding_valid_history() {
         let mut unknown_entry = test_audit_entry("unknown-verification-status");
         unknown_entry.verification_status = "unknown".to_owned();
@@ -636,6 +667,7 @@ mod tests {
         let verified = serde_json::to_string(&test_audit_entry("verified")).unwrap();
 
         let mut rejected_entry = test_audit_entry("rejected");
+        rejected_entry.verification_status = "legacy".to_owned();
         rejected_entry.outcome_status = "rejected".to_owned();
         let rejected = serde_json::to_string(&rejected_entry).unwrap();
 
