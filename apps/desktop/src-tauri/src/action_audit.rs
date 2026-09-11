@@ -62,6 +62,10 @@ fn is_valid_verification_outcome_status(verification_status: &str, outcome_statu
     )
 }
 
+fn is_valid_stage_verification_status(stage: &str, verification_status: &str) -> bool {
+    matches!((stage, verification_status), ("verified", "verified"))
+}
+
 fn is_valid_stage(stage: &str) -> bool {
     matches!(stage, "verified" | "failed")
 }
@@ -176,6 +180,8 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && !entry.message.trim().is_empty()
                 && is_valid_privilege(&entry.privilege)
                 && is_valid_verification_status(&entry.verification_status)
+                && (entry.verification_status == "legacy"
+                    || is_valid_stage_verification_status(&entry.stage, &entry.verification_status))
                 && (entry.verification_status == "legacy"
                     || !entry.verification_message.trim().is_empty())
                 && is_valid_outcome_status(&entry.outcome_status)
@@ -385,6 +391,7 @@ mod tests {
         let mut failed_entry = test_audit_entry("failed");
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
+        failed_entry.verification_status = "legacy".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
         let input = format!("{unknown}\n{verified}\n{failed}\n");
@@ -457,6 +464,7 @@ mod tests {
         let mut failed_failed_entry = test_audit_entry("failed-failed");
         failed_failed_entry.stage = "failed".to_owned();
         failed_failed_entry.status = "failed".to_owned();
+        failed_failed_entry.verification_status = "legacy".to_owned();
         let failed_failed = serde_json::to_string(&failed_failed_entry).unwrap();
 
         let input = format!(
@@ -493,6 +501,7 @@ mod tests {
         let mut failed_entry = test_audit_entry("failed-status");
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
+        failed_entry.verification_status = "legacy".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
         let input = format!("{unknown}\n{legacy}\n{completed}\n{failed}\n");
@@ -622,6 +631,25 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn inconsistent_audit_stage_verification_statuses_are_ignored_without_hiding_valid_history() {
+        let mut failed_verified_entry = test_audit_entry("failed-verified");
+        failed_verified_entry.stage = "failed".to_owned();
+        failed_verified_entry.status = "failed".to_owned();
+        failed_verified_entry.verification_status = "verified".to_owned();
+        let failed_verified = serde_json::to_string(&failed_verified_entry).unwrap();
+
+        let verified_verified =
+            serde_json::to_string(&test_audit_entry("verified-verified")).unwrap();
+
+        let input = format!("{failed_verified}\n{verified_verified}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "verified-verified");
     }
 
     #[test]
