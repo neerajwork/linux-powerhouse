@@ -59,6 +59,10 @@ fn is_valid_stage(stage: &str) -> bool {
     matches!(stage, "verified" | "failed")
 }
 
+fn is_valid_status(status: &str) -> bool {
+    matches!(status, "success" | "completed" | "failed")
+}
+
 fn is_valid_action(action: &str) -> bool {
     matches!(
         action,
@@ -152,7 +156,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && (entry.verification_status == "legacy" || is_valid_action(&entry.action))
                 && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
                 && (entry.verification_status == "legacy" || entry.confirmed)
-                && !entry.status.trim().is_empty()
+                && is_valid_status(&entry.status)
                 && !entry.message.trim().is_empty()
                 && is_valid_privilege(&entry.privilege)
                 && is_valid_verification_status(&entry.verification_status)
@@ -401,6 +405,34 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn unknown_audit_statuses_are_ignored_without_hiding_valid_history() {
+        let mut unknown_entry = test_audit_entry("unknown-status");
+        unknown_entry.status = "unknown".to_owned();
+        let unknown = serde_json::to_string(&unknown_entry).unwrap();
+
+        let mut legacy_entry = test_audit_entry("legacy-status");
+        legacy_entry.status = "success".to_owned();
+        let legacy = serde_json::to_string(&legacy_entry).unwrap();
+
+        let mut completed_entry = test_audit_entry("completed-status");
+        completed_entry.status = "completed".to_owned();
+        let completed = serde_json::to_string(&completed_entry).unwrap();
+
+        let mut failed_entry = test_audit_entry("failed-status");
+        failed_entry.status = "failed".to_owned();
+        let failed = serde_json::to_string(&failed_entry).unwrap();
+
+        let input = format!("{unknown}\n{legacy}\n{completed}\n{failed}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].id, "legacy-status");
+        assert_eq!(entries[1].id, "completed-status");
+        assert_eq!(entries[2].id, "failed-status");
     }
 
     #[test]
