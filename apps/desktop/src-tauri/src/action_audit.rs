@@ -93,6 +93,10 @@ fn is_valid_stage_status(stage: &str, status: &str) -> bool {
     )
 }
 
+fn is_valid_stage_confirmation(stage: &str, confirmed: bool) -> bool {
+    matches!((stage, confirmed), ("verified", true) | ("failed", true))
+}
+
 fn is_valid_action(action: &str) -> bool {
     matches!(
         action,
@@ -193,7 +197,8 @@ fn is_valid_audit_entry(entry: &ActionAuditEntry) -> bool {
         && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
         && (entry.verification_status == "legacy"
             || is_valid_stage_status(&entry.stage, &entry.status))
-        && (entry.verification_status == "legacy" || entry.confirmed)
+        && (entry.verification_status == "legacy"
+            || is_valid_stage_confirmation(&entry.stage, entry.confirmed))
         && is_valid_status(&entry.status)
         && !entry.message.trim().is_empty()
         && is_valid_privilege(&entry.privilege)
@@ -996,6 +1001,14 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(error, "invalid action audit entry");
+    }
+
+    #[test]
+    fn stage_confirmation_validation_accepts_supported_lifecycle_paths() {
+        assert!(is_valid_stage_confirmation("verified", true));
+        assert!(is_valid_stage_confirmation("failed", true));
+        assert!(!is_valid_stage_confirmation("verified", false));
+        assert!(!is_valid_stage_confirmation("failed", false));
     }
 
     #[test]
