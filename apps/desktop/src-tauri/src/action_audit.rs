@@ -108,6 +108,13 @@ fn is_valid_privilege(privilege: &str) -> bool {
     matches!(privilege, "none" | "None" | "Unknown")
 }
 
+fn is_valid_stage_privilege(stage: &str, privilege: &str) -> bool {
+    matches!(
+        (stage, privilege),
+        ("verified", "none" | "None") | ("failed", "Unknown")
+    )
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
@@ -186,6 +193,8 @@ fn is_valid_audit_entry(entry: &ActionAuditEntry) -> bool {
         && is_valid_status(&entry.status)
         && !entry.message.trim().is_empty()
         && is_valid_privilege(&entry.privilege)
+        && (entry.verification_status == "legacy"
+            || is_valid_stage_privilege(&entry.stage, &entry.privilege))
         && is_valid_verification_status(&entry.verification_status)
         && (entry.verification_status == "legacy"
             || is_valid_stage_verification_status(&entry.stage, &entry.verification_status))
@@ -587,9 +596,14 @@ mod tests {
         current_entry.privilege = "None".to_owned();
         let current = serde_json::to_string(&current_entry).unwrap();
 
-        let mut failed_entry = test_audit_entry("unknown-privilege");
-        failed_entry.id = "failed-privilege".to_owned();
+        let mut failed_entry = test_audit_entry("failed-privilege");
+        failed_entry.stage = "failed".to_owned();
+        failed_entry.status = "failed".to_owned();
         failed_entry.privilege = "Unknown".to_owned();
+        failed_entry.verification_status = "failed".to_owned();
+        failed_entry.verification_message = "verification failed".to_owned();
+        failed_entry.outcome_status = "rejected".to_owned();
+        failed_entry.outcome_message = "outcome rejected".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
         let input = format!("{unknown}\n{current}\n{failed}\n");
@@ -599,6 +613,31 @@ mod tests {
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].id, "current-privilege");
         assert_eq!(entries[1].id, "failed-privilege");
+    }
+
+    #[test]
+    fn inconsistent_audit_stage_privileges_are_ignored_without_hiding_valid_history() {
+        let mut verified_unknown_entry = test_audit_entry("verified-unknown");
+        verified_unknown_entry.privilege = "Unknown".to_owned();
+        let verified_unknown = serde_json::to_string(&verified_unknown_entry).unwrap();
+
+        let mut failed_none_entry = test_audit_entry("failed-none");
+        failed_none_entry.stage = "failed".to_owned();
+        failed_none_entry.status = "failed".to_owned();
+        failed_none_entry.privilege = "None".to_owned();
+        failed_none_entry.verification_status = "failed".to_owned();
+        failed_none_entry.verification_message = "verification failed".to_owned();
+        failed_none_entry.outcome_status = "rejected".to_owned();
+        failed_none_entry.outcome_message = "outcome rejected".to_owned();
+        let failed_none = serde_json::to_string(&failed_none_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{verified_unknown}\n{failed_none}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
     }
 
     #[test]
@@ -663,6 +702,7 @@ mod tests {
         let mut failed_entry = test_audit_entry("failed-rejected");
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
+        failed_entry.privilege = "Unknown".to_owned();
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
         failed_entry.outcome_status = "rejected".to_owned();
@@ -931,6 +971,7 @@ mod tests {
         let mut failed_entry = test_audit_entry("failed");
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
+        failed_entry.privilege = "Unknown".to_owned();
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
         failed_entry.outcome_status = "rejected".to_owned();
