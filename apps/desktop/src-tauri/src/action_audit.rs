@@ -66,6 +66,10 @@ fn is_valid_stage_verification_status(stage: &str, verification_status: &str) ->
     matches!((stage, verification_status), ("verified", "verified"))
 }
 
+fn is_valid_stage_outcome_status(stage: &str, outcome_status: &str) -> bool {
+    matches!((stage, outcome_status), ("verified", "verified"))
+}
+
 fn is_valid_stage(stage: &str) -> bool {
     matches!(stage, "verified" | "failed")
 }
@@ -185,6 +189,9 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                 && (entry.verification_status == "legacy"
                     || !entry.verification_message.trim().is_empty())
                 && is_valid_outcome_status(&entry.outcome_status)
+                && (entry.verification_status == "legacy"
+                    || entry.outcome_status == "legacy"
+                    || is_valid_stage_outcome_status(&entry.stage, &entry.outcome_status))
                 && (entry.verification_status == "legacy"
                     || entry.outcome_status == "legacy"
                     || is_valid_verification_outcome_status(
@@ -639,6 +646,25 @@ mod tests {
         failed_verified_entry.stage = "failed".to_owned();
         failed_verified_entry.status = "failed".to_owned();
         failed_verified_entry.verification_status = "verified".to_owned();
+        let failed_verified = serde_json::to_string(&failed_verified_entry).unwrap();
+
+        let verified_verified =
+            serde_json::to_string(&test_audit_entry("verified-verified")).unwrap();
+
+        let input = format!("{failed_verified}\n{verified_verified}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "verified-verified");
+    }
+
+    #[test]
+    fn inconsistent_audit_stage_outcome_statuses_are_ignored_without_hiding_valid_history() {
+        let mut failed_verified_entry = test_audit_entry("failed-verified");
+        failed_verified_entry.stage = "failed".to_owned();
+        failed_verified_entry.status = "failed".to_owned();
+        failed_verified_entry.outcome_status = "verified".to_owned();
         let failed_verified = serde_json::to_string(&failed_verified_entry).unwrap();
 
         let verified_verified =
