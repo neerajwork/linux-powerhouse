@@ -115,6 +115,10 @@ fn is_valid_stage_privilege(stage: &str, privilege: &str) -> bool {
     )
 }
 
+fn is_valid_stage_reversibility(stage: &str, reversible: bool) -> bool {
+    matches!((stage, reversible), ("verified", true) | ("failed", false))
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
@@ -195,6 +199,8 @@ fn is_valid_audit_entry(entry: &ActionAuditEntry) -> bool {
         && is_valid_privilege(&entry.privilege)
         && (entry.verification_status == "legacy"
             || is_valid_stage_privilege(&entry.stage, &entry.privilege))
+        && (entry.verification_status == "legacy"
+            || is_valid_stage_reversibility(&entry.stage, entry.reversible))
         && is_valid_verification_status(&entry.verification_status)
         && (entry.verification_status == "legacy"
             || is_valid_stage_verification_status(&entry.stage, &entry.verification_status))
@@ -599,6 +605,7 @@ mod tests {
         let mut failed_entry = test_audit_entry("failed-privilege");
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
+        failed_entry.reversible = false;
         failed_entry.privilege = "Unknown".to_owned();
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
@@ -633,6 +640,35 @@ mod tests {
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
         let input = format!("{verified_unknown}\n{failed_none}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn inconsistent_audit_stage_reversibility_is_ignored_without_hiding_valid_history() {
+        let mut verified_irreversible_entry = test_audit_entry("verified-irreversible");
+        verified_irreversible_entry.reversible = false;
+        let verified_irreversible =
+            serde_json::to_string(&verified_irreversible_entry).unwrap();
+
+        let mut failed_reversible_entry = test_audit_entry("failed-reversible");
+        failed_reversible_entry.stage = "failed".to_owned();
+        failed_reversible_entry.status = "failed".to_owned();
+        failed_reversible_entry.reversible = true;
+        failed_reversible_entry.privilege = "Unknown".to_owned();
+        failed_reversible_entry.verification_status = "failed".to_owned();
+        failed_reversible_entry.verification_message = "verification failed".to_owned();
+        failed_reversible_entry.outcome_status = "rejected".to_owned();
+        failed_reversible_entry.outcome_message = "outcome rejected".to_owned();
+        let failed_reversible =
+            serde_json::to_string(&failed_reversible_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input =
+            format!("{verified_irreversible}\n{failed_reversible}\n{valid}\n");
 
         let entries = parse_audit_entries(Cursor::new(input)).unwrap();
 
@@ -702,6 +738,7 @@ mod tests {
         let mut failed_entry = test_audit_entry("failed-rejected");
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
+        failed_entry.reversible = false;
         failed_entry.privilege = "Unknown".to_owned();
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
@@ -971,6 +1008,7 @@ mod tests {
         let mut failed_entry = test_audit_entry("failed");
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
+        failed_entry.reversible = false;
         failed_entry.privilege = "Unknown".to_owned();
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
