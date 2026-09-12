@@ -26,6 +26,8 @@ pub struct ActionAuditEntry {
     pub outcome_status: String,
     #[serde(default)]
     pub outcome_message: String,
+    #[serde(default)]
+    pub outcome_action: String,
 }
 
 fn audit_id() -> String {
@@ -135,6 +137,7 @@ impl ActionAudit {
             verification_message: verification_message.to_owned(),
             outcome_status: outcome_status_label(&outcome.status).to_owned(),
             outcome_message: outcome.message.clone(),
+            outcome_action: outcome.action_id.clone(),
         };
         let path = audit_path()?;
         if let Some(parent) = path.parent() {
@@ -199,6 +202,9 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
                         &entry.outcome_status,
                     ))
                 && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
+                && (entry.outcome_status == "legacy"
+                    || (!entry.outcome_action.trim().is_empty()
+                        && entry.action == entry.outcome_action))
                 && seen_ids.insert(entry.id.clone())
             {
                 entries.push(entry);
@@ -245,6 +251,7 @@ mod tests {
             verification_message: "verified".to_owned(),
             outcome_status: "verified".to_owned(),
             outcome_message: "outcome verified".to_owned(),
+            outcome_action: "refresh_health".to_owned(),
         }
     }
 
@@ -352,6 +359,7 @@ mod tests {
             .map(|(index, action)| {
                 let mut entry = test_audit_entry(&format!("valid-action-{index}"));
                 entry.action = (*action).to_owned();
+                entry.outcome_action = (*action).to_owned();
                 serde_json::to_string(&entry).unwrap()
             })
             .collect::<Vec<_>>();
@@ -735,6 +743,40 @@ mod tests {
     }
 
     #[test]
+    fn inconsistent_audit_outcome_actions_are_ignored_without_hiding_valid_history() {
+        let mut inconsistent_entry = test_audit_entry("inconsistent-outcome-action");
+        inconsistent_entry.outcome_action = "storage_diagnostic".to_owned();
+        let inconsistent = serde_json::to_string(&inconsistent_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{inconsistent}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn blank_audit_outcome_actions_are_ignored_without_hiding_valid_history() {
+        let mut blank_entry = test_audit_entry("blank-outcome-action");
+        blank_entry.outcome_action = "".to_owned();
+        let blank = serde_json::to_string(&blank_entry).unwrap();
+
+        let mut whitespace_entry = test_audit_entry("whitespace-outcome-action");
+        whitespace_entry.outcome_action = "   ".to_owned();
+        let whitespace = serde_json::to_string(&whitespace_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{blank}\n{whitespace}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
     fn blank_audit_outcome_messages_are_ignored_without_hiding_valid_history() {
         let mut empty_entry = test_audit_entry("empty-outcome-message");
         empty_entry.outcome_message = "".to_owned();
@@ -765,6 +807,7 @@ mod tests {
         assert_eq!(entries[0].verification_message, "");
         assert_eq!(entries[0].outcome_status, "legacy");
         assert_eq!(entries[0].outcome_message, "");
+        assert_eq!(entries[0].outcome_action, "");
     }
 
     #[test]
