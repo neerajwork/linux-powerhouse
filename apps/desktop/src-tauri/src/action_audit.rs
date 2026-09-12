@@ -54,22 +54,28 @@ fn is_valid_outcome_status(status: &str) -> bool {
 }
 
 fn is_valid_verification_status(status: &str) -> bool {
-    matches!(status, "legacy" | "verified")
+    matches!(status, "legacy" | "verified" | "failed")
 }
 
 fn is_valid_verification_outcome_status(verification_status: &str, outcome_status: &str) -> bool {
     matches!(
         (verification_status, outcome_status),
-        ("verified", "verified")
+        ("verified", "verified") | ("failed", "rejected")
     )
 }
 
 fn is_valid_stage_verification_status(stage: &str, verification_status: &str) -> bool {
-    matches!((stage, verification_status), ("verified", "verified"))
+    matches!(
+        (stage, verification_status),
+        ("verified", "verified") | ("failed", "failed")
+    )
 }
 
 fn is_valid_stage_outcome_status(stage: &str, outcome_status: &str) -> bool {
-    matches!((stage, outcome_status), ("verified", "verified"))
+    matches!(
+        (stage, outcome_status),
+        ("verified", "verified") | ("failed", "rejected")
+    )
 }
 
 fn is_valid_stage(stage: &str) -> bool {
@@ -641,6 +647,45 @@ mod tests {
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
         let input = format!("{empty}\n{whitespace}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn failed_audit_records_with_rejected_outcomes_remain_visible() {
+        let mut failed_entry = test_audit_entry("failed-rejected");
+        failed_entry.stage = "failed".to_owned();
+        failed_entry.status = "failed".to_owned();
+        failed_entry.verification_status = "failed".to_owned();
+        failed_entry.verification_message = "verification failed".to_owned();
+        failed_entry.outcome_status = "rejected".to_owned();
+        failed_entry.outcome_message = "outcome rejected".to_owned();
+
+        let failed = serde_json::to_string(&failed_entry).unwrap();
+        let verified = serde_json::to_string(&test_audit_entry("verified")).unwrap();
+        let input = format!("{failed}\n{verified}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "failed-rejected");
+        assert_eq!(entries[1].id, "verified");
+    }
+
+    #[test]
+    fn inconsistent_verified_stage_failed_outcome_path_is_ignored_without_hiding_valid_history() {
+        let mut inconsistent_entry = test_audit_entry("verified-failed-rejected");
+        inconsistent_entry.verification_status = "failed".to_owned();
+        inconsistent_entry.verification_message = "verification failed".to_owned();
+        inconsistent_entry.outcome_status = "rejected".to_owned();
+        inconsistent_entry.outcome_message = "outcome rejected".to_owned();
+        let inconsistent = serde_json::to_string(&inconsistent_entry).unwrap();
+
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{inconsistent}\n{valid}\n");
 
         let entries = parse_audit_entries(Cursor::new(input)).unwrap();
 
