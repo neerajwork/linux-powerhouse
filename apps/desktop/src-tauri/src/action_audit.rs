@@ -651,8 +651,7 @@ mod tests {
     fn inconsistent_audit_stage_reversibility_is_ignored_without_hiding_valid_history() {
         let mut verified_irreversible_entry = test_audit_entry("verified-irreversible");
         verified_irreversible_entry.reversible = false;
-        let verified_irreversible =
-            serde_json::to_string(&verified_irreversible_entry).unwrap();
+        let verified_irreversible = serde_json::to_string(&verified_irreversible_entry).unwrap();
 
         let mut failed_reversible_entry = test_audit_entry("failed-reversible");
         failed_reversible_entry.stage = "failed".to_owned();
@@ -663,12 +662,10 @@ mod tests {
         failed_reversible_entry.verification_message = "verification failed".to_owned();
         failed_reversible_entry.outcome_status = "rejected".to_owned();
         failed_reversible_entry.outcome_message = "outcome rejected".to_owned();
-        let failed_reversible =
-            serde_json::to_string(&failed_reversible_entry).unwrap();
+        let failed_reversible = serde_json::to_string(&failed_reversible_entry).unwrap();
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
-        let input =
-            format!("{verified_irreversible}\n{failed_reversible}\n{valid}\n");
+        let input = format!("{verified_irreversible}\n{failed_reversible}\n{valid}\n");
 
         let entries = parse_audit_entries(Cursor::new(input)).unwrap();
 
