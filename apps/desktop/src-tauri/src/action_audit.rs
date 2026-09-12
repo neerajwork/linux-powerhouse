@@ -123,6 +123,16 @@ fn is_valid_stage_reversibility(stage: &str, reversible: bool) -> bool {
     matches!((stage, reversible), ("verified", true) | ("failed", false))
 }
 
+fn is_valid_complete_lifecycle(entry: &ActionAuditEntry) -> bool {
+    is_valid_stage_status(&entry.stage, &entry.status)
+        && is_valid_stage_confirmation(&entry.stage, entry.confirmed)
+        && is_valid_stage_privilege(&entry.stage, &entry.privilege)
+        && is_valid_stage_reversibility(&entry.stage, entry.reversible)
+        && is_valid_stage_verification_status(&entry.stage, &entry.verification_status)
+        && is_valid_stage_outcome_status(&entry.stage, &entry.outcome_status)
+        && is_valid_verification_outcome_status(&entry.verification_status, &entry.outcome_status)
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
@@ -195,31 +205,13 @@ fn is_valid_audit_entry(entry: &ActionAuditEntry) -> bool {
         && !entry.action.trim().is_empty()
         && (entry.verification_status == "legacy" || is_valid_action(&entry.action))
         && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
-        && (entry.verification_status == "legacy"
-            || is_valid_stage_status(&entry.stage, &entry.status))
-        && (entry.verification_status == "legacy"
-            || is_valid_stage_confirmation(&entry.stage, entry.confirmed))
+        && (entry.verification_status == "legacy" || is_valid_complete_lifecycle(entry))
         && is_valid_status(&entry.status)
         && !entry.message.trim().is_empty()
         && is_valid_privilege(&entry.privilege)
-        && (entry.verification_status == "legacy"
-            || is_valid_stage_privilege(&entry.stage, &entry.privilege))
-        && (entry.verification_status == "legacy"
-            || is_valid_stage_reversibility(&entry.stage, entry.reversible))
         && is_valid_verification_status(&entry.verification_status)
-        && (entry.verification_status == "legacy"
-            || is_valid_stage_verification_status(&entry.stage, &entry.verification_status))
         && (entry.verification_status == "legacy" || !entry.verification_message.trim().is_empty())
         && is_valid_outcome_status(&entry.outcome_status)
-        && (entry.verification_status == "legacy"
-            || entry.outcome_status == "legacy"
-            || is_valid_stage_outcome_status(&entry.stage, &entry.outcome_status))
-        && (entry.verification_status == "legacy"
-            || entry.outcome_status == "legacy"
-            || is_valid_verification_outcome_status(
-                &entry.verification_status,
-                &entry.outcome_status,
-            ))
         && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
         && (entry.outcome_status == "legacy"
             || (!entry.outcome_action.trim().is_empty() && entry.action == entry.outcome_action))
@@ -1009,6 +1001,37 @@ mod tests {
         assert!(is_valid_stage_confirmation("failed", true));
         assert!(!is_valid_stage_confirmation("verified", false));
         assert!(!is_valid_stage_confirmation("failed", false));
+    }
+
+    #[test]
+    fn complete_lifecycle_validation_accepts_supported_verified_and_failed_paths() {
+        assert!(is_valid_complete_lifecycle(&test_audit_entry("verified")));
+
+        let mut failed_entry = test_audit_entry("failed");
+        failed_entry.stage = "failed".to_owned();
+        failed_entry.status = "failed".to_owned();
+        failed_entry.reversible = false;
+        failed_entry.privilege = "Unknown".to_owned();
+        failed_entry.verification_status = "failed".to_owned();
+        failed_entry.verification_message = "verification failed".to_owned();
+        failed_entry.outcome_status = "rejected".to_owned();
+        failed_entry.outcome_message = "outcome rejected".to_owned();
+
+        assert!(is_valid_complete_lifecycle(&failed_entry));
+    }
+
+    #[test]
+    fn complete_lifecycle_validation_rejects_inconsistent_paths() {
+        let mut failed_entry = test_audit_entry("failed-verified");
+        failed_entry.stage = "failed".to_owned();
+        failed_entry.status = "failed".to_owned();
+
+        assert!(!is_valid_complete_lifecycle(&failed_entry));
+
+        let mut unconfirmed_entry = test_audit_entry("unconfirmed");
+        unconfirmed_entry.confirmed = false;
+
+        assert!(!is_valid_complete_lifecycle(&unconfirmed_entry));
     }
 
     #[test]
