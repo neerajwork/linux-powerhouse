@@ -145,6 +145,10 @@ impl ActionAudit {
             outcome_message: outcome.message.clone(),
             outcome_action: outcome.action_id.clone(),
         };
+        if !is_valid_audit_entry(&entry) {
+            return Err("invalid action audit entry".to_owned());
+        }
+
         let path = audit_path()?;
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|error| error.to_string())?;
@@ -170,6 +174,37 @@ impl ActionAudit {
     }
 }
 
+fn is_valid_audit_entry(entry: &ActionAuditEntry) -> bool {
+    entry.timestamp > 0
+        && !entry.id.trim().is_empty()
+        && !entry.action.trim().is_empty()
+        && (entry.verification_status == "legacy" || is_valid_action(&entry.action))
+        && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
+        && (entry.verification_status == "legacy"
+            || is_valid_stage_status(&entry.stage, &entry.status))
+        && (entry.verification_status == "legacy" || entry.confirmed)
+        && is_valid_status(&entry.status)
+        && !entry.message.trim().is_empty()
+        && is_valid_privilege(&entry.privilege)
+        && is_valid_verification_status(&entry.verification_status)
+        && (entry.verification_status == "legacy"
+            || is_valid_stage_verification_status(&entry.stage, &entry.verification_status))
+        && (entry.verification_status == "legacy" || !entry.verification_message.trim().is_empty())
+        && is_valid_outcome_status(&entry.outcome_status)
+        && (entry.verification_status == "legacy"
+            || entry.outcome_status == "legacy"
+            || is_valid_stage_outcome_status(&entry.stage, &entry.outcome_status))
+        && (entry.verification_status == "legacy"
+            || entry.outcome_status == "legacy"
+            || is_valid_verification_outcome_status(
+                &entry.verification_status,
+                &entry.outcome_status,
+            ))
+        && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
+        && (entry.outcome_status == "legacy"
+            || (!entry.outcome_action.trim().is_empty() && entry.action == entry.outcome_action))
+}
+
 fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, String> {
     let mut entries = Vec::new();
     let mut seen_ids = HashSet::new();
@@ -181,38 +216,7 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
         }
 
         if let Ok(entry) = serde_json::from_str::<ActionAuditEntry>(&line) {
-            if entry.timestamp > 0
-                && !entry.id.trim().is_empty()
-                && !entry.action.trim().is_empty()
-                && (entry.verification_status == "legacy" || is_valid_action(&entry.action))
-                && (entry.verification_status == "legacy" || is_valid_stage(&entry.stage))
-                && (entry.verification_status == "legacy"
-                    || is_valid_stage_status(&entry.stage, &entry.status))
-                && (entry.verification_status == "legacy" || entry.confirmed)
-                && is_valid_status(&entry.status)
-                && !entry.message.trim().is_empty()
-                && is_valid_privilege(&entry.privilege)
-                && is_valid_verification_status(&entry.verification_status)
-                && (entry.verification_status == "legacy"
-                    || is_valid_stage_verification_status(&entry.stage, &entry.verification_status))
-                && (entry.verification_status == "legacy"
-                    || !entry.verification_message.trim().is_empty())
-                && is_valid_outcome_status(&entry.outcome_status)
-                && (entry.verification_status == "legacy"
-                    || entry.outcome_status == "legacy"
-                    || is_valid_stage_outcome_status(&entry.stage, &entry.outcome_status))
-                && (entry.verification_status == "legacy"
-                    || entry.outcome_status == "legacy"
-                    || is_valid_verification_outcome_status(
-                        &entry.verification_status,
-                        &entry.outcome_status,
-                    ))
-                && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
-                && (entry.outcome_status == "legacy"
-                    || (!entry.outcome_action.trim().is_empty()
-                        && entry.action == entry.outcome_action))
-                && seen_ids.insert(entry.id.clone())
-            {
+            if is_valid_audit_entry(&entry) && seen_ids.insert(entry.id.clone()) {
                 entries.push(entry);
             }
         }
@@ -881,6 +885,58 @@ mod tests {
         assert_eq!(history, vec![entry]);
 
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn record_rejects_entries_that_fail_audit_validation() {
+        let audit = ActionAudit;
+        let outcome = AlertActionOutcome {
+            action_id: "refresh_health".to_owned(),
+            execution: health_status::AlertActionExecutionResult {
+                action_id: "refresh_health".to_owned(),
+                executed: true,
+                message: "execution completed".to_owned(),
+            },
+            verification: health_status::AlertActionVerificationResult {
+                action_id: "refresh_health".to_owned(),
+                status: health_status::AlertActionVerificationStatus::Passed,
+                message: "verified".to_owned(),
+            },
+            status: AlertActionOutcomeStatus::Verified,
+            message: "outcome verified".to_owned(),
+        };
+
+        let error = audit
+            .record(
+                "refresh_health",
+                "failed",
+                true,
+                "failed",
+                "action failed",
+                false,
+                "Unknown",
+                "failed",
+                "verification failed",
+                &outcome,
+            )
+            .unwrap_err();
+
+        assert_eq!(error, "invalid action audit entry");
+    }
+
+    #[test]
+    fn shared_audit_validation_accepts_supported_verified_and_failed_paths() {
+        assert!(is_valid_audit_entry(&test_audit_entry("verified")));
+
+        let mut failed_entry = test_audit_entry("failed");
+        failed_entry.stage = "failed".to_owned();
+        failed_entry.status = "failed".to_owned();
+        failed_entry.verification_status = "failed".to_owned();
+        failed_entry.verification_message = "verification failed".to_owned();
+        failed_entry.outcome_status = "rejected".to_owned();
+        failed_entry.outcome_message = "outcome rejected".to_owned();
+
+        assert!(is_valid_audit_entry(&failed_entry));
     }
 
     #[test]
