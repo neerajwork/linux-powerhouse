@@ -70,6 +70,21 @@ fn is_valid_outcome_evidence(action: &str, outcome: &AlertActionOutcome) -> bool
         }
 }
 
+fn is_valid_verification_evidence(
+    action: &str,
+    verification_status: &str,
+    verification_message: &str,
+    outcome: &AlertActionOutcome,
+) -> bool {
+    outcome.verification.action_id == action
+        && outcome.verification.message == verification_message
+        && matches!(
+            (verification_status, &outcome.verification.status),
+            ("verified", AlertActionVerificationStatus::Passed)
+                | ("failed", AlertActionVerificationStatus::Failed)
+        )
+}
+
 fn is_valid_verification_status(status: &str) -> bool {
     matches!(status, "legacy" | "verified" | "failed")
 }
@@ -169,6 +184,15 @@ impl ActionAudit {
     ) -> Result<ActionAuditEntry, String> {
         if !is_valid_outcome_evidence(action, outcome) {
             return Err("invalid action audit outcome evidence".to_owned());
+        }
+
+        if !is_valid_verification_evidence(
+            action,
+            verification_status,
+            verification_message,
+            outcome,
+        ) {
+            return Err("invalid action audit verification evidence".to_owned());
         }
 
         let timestamp = SystemTime::now()
@@ -377,6 +401,62 @@ mod tests {
         outcome.status = AlertActionOutcomeStatus::Rejected;
 
         assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
+    }
+
+    #[test]
+    fn verification_evidence_validation_accepts_matching_verified_and_failed_evidence() {
+        let verified = test_verified_outcome();
+        assert!(is_valid_verification_evidence(
+            "refresh_health",
+            "verified",
+            "verified",
+            &verified,
+        ));
+
+        let rejected = test_rejected_outcome();
+        assert!(is_valid_verification_evidence(
+            "refresh_health",
+            "failed",
+            "verification failed",
+            &rejected,
+        ));
+    }
+
+    #[test]
+    fn verification_evidence_validation_rejects_mismatched_action() {
+        let mut outcome = test_verified_outcome();
+        outcome.verification.action_id = "storage_diagnostic".to_owned();
+
+        assert!(!is_valid_verification_evidence(
+            "refresh_health",
+            "verified",
+            "verified",
+            &outcome,
+        ));
+    }
+
+    #[test]
+    fn verification_evidence_validation_rejects_mismatched_status() {
+        let outcome = test_verified_outcome();
+
+        assert!(!is_valid_verification_evidence(
+            "refresh_health",
+            "failed",
+            "verified",
+            &outcome,
+        ));
+    }
+
+    #[test]
+    fn verification_evidence_validation_rejects_mismatched_message() {
+        let outcome = test_verified_outcome();
+
+        assert!(!is_valid_verification_evidence(
+            "refresh_health",
+            "verified",
+            "different message",
+            &outcome,
+        ));
     }
 
     #[test]
@@ -1109,23 +1189,32 @@ mod tests {
     }
 
     #[test]
+    fn record_rejects_invalid_verification_evidence_before_audit_validation() {
+        let audit = ActionAudit;
+        let outcome = test_verified_outcome();
+
+        let error = audit
+            .record(
+                "refresh_health",
+                "verified",
+                true,
+                "success",
+                "action completed",
+                true,
+                "none",
+                "failed",
+                "verified",
+                &outcome,
+            )
+            .unwrap_err();
+
+        assert_eq!(error, "invalid action audit verification evidence");
+    }
+
+    #[test]
     fn record_rejects_entries_that_fail_audit_validation() {
         let audit = ActionAudit;
-        let outcome = AlertActionOutcome {
-            action_id: "refresh_health".to_owned(),
-            execution: health_status::AlertActionExecutionResult {
-                action_id: "refresh_health".to_owned(),
-                executed: true,
-                message: "execution completed".to_owned(),
-            },
-            verification: health_status::AlertActionVerificationResult {
-                action_id: "refresh_health".to_owned(),
-                status: health_status::AlertActionVerificationStatus::Passed,
-                message: "verified".to_owned(),
-            },
-            status: AlertActionOutcomeStatus::Verified,
-            message: "outcome verified".to_owned(),
-        };
+        let outcome = test_rejected_outcome();
 
         let error = audit
             .record(
@@ -1135,7 +1224,7 @@ mod tests {
                 "failed",
                 "action failed",
                 false,
-                "Unknown",
+                "none",
                 "failed",
                 "verification failed",
                 &outcome,
