@@ -65,8 +65,7 @@ fn is_valid_outcome_evidence(action: &str, outcome: &AlertActionOutcome) -> bool
                     && outcome.verification.status == AlertActionVerificationStatus::Passed
             }
             AlertActionOutcomeStatus::Rejected => {
-                !outcome.execution.executed
-                    || outcome.verification.status == AlertActionVerificationStatus::Failed
+                outcome.verification.status == AlertActionVerificationStatus::Failed
             }
         }
 }
@@ -366,6 +365,15 @@ mod tests {
     #[test]
     fn outcome_evidence_validation_rejects_rejected_status_with_verified_evidence() {
         let mut outcome = test_verified_outcome();
+        outcome.status = AlertActionOutcomeStatus::Rejected;
+
+        assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
+    }
+
+    #[test]
+    fn outcome_evidence_validation_rejects_non_executed_result_with_passed_verification() {
+        let mut outcome = test_verified_outcome();
+        outcome.execution.executed = false;
         outcome.status = AlertActionOutcomeStatus::Rejected;
 
         assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
