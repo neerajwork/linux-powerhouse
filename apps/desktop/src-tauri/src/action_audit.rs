@@ -1,4 +1,4 @@
-use health_status::{AlertActionOutcome, AlertActionOutcomeStatus};
+use health_status::{AlertActionOutcome, AlertActionOutcomeStatus, AlertActionVerificationStatus};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
@@ -51,6 +51,24 @@ fn outcome_status_label(status: &AlertActionOutcomeStatus) -> &'static str {
 
 fn is_valid_outcome_status(status: &str) -> bool {
     matches!(status, "legacy" | "verified" | "rejected")
+}
+
+fn is_valid_outcome_evidence(action: &str, outcome: &AlertActionOutcome) -> bool {
+    let action_matches = outcome.action_id == action
+        && outcome.execution.action_id == outcome.action_id
+        && outcome.verification.action_id == outcome.action_id;
+
+    action_matches
+        && match outcome.status {
+            AlertActionOutcomeStatus::Verified => {
+                outcome.execution.executed
+                    && outcome.verification.status == AlertActionVerificationStatus::Passed
+            }
+            AlertActionOutcomeStatus::Rejected => {
+                !outcome.execution.executed
+                    || outcome.verification.status == AlertActionVerificationStatus::Failed
+            }
+        }
 }
 
 fn is_valid_verification_status(status: &str) -> bool {
@@ -150,6 +168,10 @@ impl ActionAudit {
         verification_message: &str,
         outcome: &AlertActionOutcome,
     ) -> Result<ActionAuditEntry, String> {
+        if !is_valid_outcome_evidence(action, outcome) {
+            return Err("invalid action audit outcome evidence".to_owned());
+        }
+
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| "system clock is before the Unix epoch".to_owned())?
@@ -275,6 +297,78 @@ mod tests {
             outcome_message: "outcome verified".to_owned(),
             outcome_action: "refresh_health".to_owned(),
         }
+    }
+
+    fn test_verified_outcome() -> AlertActionOutcome {
+        AlertActionOutcome {
+            action_id: "refresh_health".to_owned(),
+            execution: health_status::AlertActionExecutionResult {
+                action_id: "refresh_health".to_owned(),
+                executed: true,
+                message: "execution completed".to_owned(),
+            },
+            verification: health_status::AlertActionVerificationResult {
+                action_id: "refresh_health".to_owned(),
+                status: AlertActionVerificationStatus::Passed,
+                message: "verified".to_owned(),
+            },
+            status: AlertActionOutcomeStatus::Verified,
+            message: "outcome verified".to_owned(),
+        }
+    }
+
+    fn test_rejected_outcome() -> AlertActionOutcome {
+        AlertActionOutcome {
+            action_id: "refresh_health".to_owned(),
+            execution: health_status::AlertActionExecutionResult {
+                action_id: "refresh_health".to_owned(),
+                executed: false,
+                message: "execution failed".to_owned(),
+            },
+            verification: health_status::AlertActionVerificationResult {
+                action_id: "refresh_health".to_owned(),
+                status: AlertActionVerificationStatus::Failed,
+                message: "verification failed".to_owned(),
+            },
+            status: AlertActionOutcomeStatus::Rejected,
+            message: "outcome rejected".to_owned(),
+        }
+    }
+
+    #[test]
+    fn outcome_evidence_validation_accepts_verified_and_rejected_evidence() {
+        assert!(is_valid_outcome_evidence(
+            "refresh_health",
+            &test_verified_outcome()
+        ));
+        assert!(is_valid_outcome_evidence(
+            "refresh_health",
+            &test_rejected_outcome()
+        ));
+    }
+
+    #[test]
+    fn outcome_evidence_validation_rejects_mismatched_actions() {
+        let mut outcome = test_verified_outcome();
+        outcome.execution.action_id = "storage_diagnostic".to_owned();
+
+        assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
+    }
+
+    #[test]
+    fn outcome_evidence_validation_rejects_verified_status_without_verified_evidence() {
+        let mut outcome = test_verified_outcome();
+        outcome.execution.executed = false;
+
+        assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
+    }
+
+    #[test]
+    fn outcome_evidence_validation_rejects_rejected_status_with_verified_evidence() {
+        let mut outcome = test_verified_outcome();
+        outcome.status = AlertActionOutcomeStatus::Rejected;
+
+        assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
     }
 
     #[test]
@@ -956,6 +1050,54 @@ mod tests {
         assert_eq!(history, vec![entry]);
 
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn record_rejects_invalid_outcome_evidence_before_audit_validation() {
+        let audit = ActionAudit;
+        let mut outcome = test_verified_outcome();
+        outcome.execution.executed = false;
+
+        let error = audit
+            .record(
+                "refresh_health",
+                "verified",
+                true,
+                "success",
+                "action completed",
+                true,
+                "none",
+                "verified",
+                "verification completed",
+                &outcome,
+            )
+            .unwrap_err();
+
+        assert_eq!(error, "invalid action audit outcome evidence");
+    }
+
+    #[test]
+    fn record_rejects_mismatched_outcome_evidence_before_audit_validation() {
+        let audit = ActionAudit;
+        let mut outcome = test_verified_outcome();
+        outcome.execution.action_id = "storage_diagnostic".to_owned();
+
+        let error = audit
+            .record(
+                "refresh_health",
+                "verified",
+                true,
+                "success",
+                "action completed",
+                true,
+                "none",
+                "verified",
+                "verification completed",
+                &outcome,
+            )
+            .unwrap_err();
+
+        assert_eq!(error, "invalid action audit outcome evidence");
     }
 
     #[test]
