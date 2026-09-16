@@ -272,7 +272,7 @@ fn safe_system_action(
 
             let outcome = derive_action_outcome(&execution_request, execution, verification_result);
 
-            let _ = state.audit.record(
+            state.audit.record(
                 &action_name,
                 "failed",
                 true,
@@ -283,7 +283,7 @@ fn safe_system_action(
                 &verification.status,
                 &verification.message,
                 &outcome,
-            );
+            )?;
 
             Err(error)
         }
