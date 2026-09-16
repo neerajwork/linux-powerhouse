@@ -39,3 +39,70 @@ pub fn suggest_remediation(
 
     Vec::new()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::suggest_remediation;
+
+    #[test]
+    fn failed_refresh_health_suggests_storage_diagnostic() {
+        let suggestions = suggest_remediation("refresh_health", "failed", "failed");
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].action, "refresh_health");
+        assert_eq!(suggestions[0].suggested_action, "storage_diagnostic");
+        assert!(suggestions[0].requires_confirmation);
+    }
+
+    #[test]
+    fn failed_diagnostic_actions_suggest_health_refresh() {
+        for action in [
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ] {
+            let suggestions = suggest_remediation(action, "failed", "failed");
+
+            assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
+            assert_eq!(suggestions[0].action, action);
+            assert_eq!(suggestions[0].suggested_action, "refresh_health");
+            assert!(suggestions[0].requires_confirmation);
+        }
+    }
+
+    #[test]
+    fn failed_unknown_action_suggests_health_refresh() {
+        let suggestions = suggest_remediation("unknown_action", "failed", "failed");
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].action, "unknown_action");
+        assert_eq!(suggestions[0].suggested_action, "refresh_health");
+        assert!(suggestions[0].requires_confirmation);
+    }
+
+    #[test]
+    fn verified_action_suggests_health_refresh() {
+        let suggestions = suggest_remediation("storage_diagnostic", "completed", "verified");
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].action, "storage_diagnostic");
+        assert_eq!(suggestions[0].suggested_action, "refresh_health");
+        assert!(suggestions[0].requires_confirmation);
+    }
+
+    #[test]
+    fn failed_status_takes_precedence_over_verified_status() {
+        let suggestions = suggest_remediation("refresh_health", "failed", "verified");
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].suggested_action, "storage_diagnostic");
+    }
+
+    #[test]
+    fn incomplete_action_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "completed", "pending");
+
+        assert!(suggestions.is_empty());
+    }
+}
