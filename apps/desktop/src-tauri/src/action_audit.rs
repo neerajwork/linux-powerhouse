@@ -484,16 +484,21 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_audit_ids_do_not_hide_unique_history() {
-        let first = serde_json::to_string(&test_audit_entry("first")).unwrap();
-        let duplicate = serde_json::to_string(&test_audit_entry("first")).unwrap();
+    fn duplicate_audit_ids_keep_first_record_without_hiding_unique_history() {
+        let first_entry = test_audit_entry("first");
+        let mut duplicate_entry = test_audit_entry("first");
+        duplicate_entry.message = "different duplicate message".to_owned();
+        duplicate_entry.outcome_message = "different duplicate outcome".to_owned();
+
+        let first = serde_json::to_string(&first_entry).unwrap();
+        let duplicate = serde_json::to_string(&duplicate_entry).unwrap();
         let second = serde_json::to_string(&test_audit_entry("second")).unwrap();
         let input = format!("{first}\n{duplicate}\n{second}\n");
 
         let entries = parse_audit_entries(Cursor::new(input)).unwrap();
 
         assert_eq!(entries.len(), 2);
-        assert_eq!(entries[0].id, "first");
+        assert_eq!(entries[0], first_entry);
         assert_eq!(entries[1].id, "second");
     }
 
