@@ -11,6 +11,10 @@ pub fn suggest_remediation(
     status: &str,
     verification_status: &str,
 ) -> Vec<RemediationSuggestion> {
+    if !matches!(status, "success" | "completed" | "failed") {
+        return Vec::new();
+    }
+
     if status == "failed" || verification_status == "failed" {
         let suggested_action = match action {
             "refresh_health" => "storage_diagnostic",
@@ -102,6 +106,20 @@ mod tests {
     #[test]
     fn incomplete_action_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "completed", "pending");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn unknown_status_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "unknown", "verified");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn unknown_verification_status_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "completed", "unknown");
 
         assert!(suggestions.is_empty());
     }
