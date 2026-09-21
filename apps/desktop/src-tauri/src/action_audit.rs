@@ -78,6 +78,7 @@ fn is_valid_verification_evidence(
     outcome: &AlertActionOutcome,
 ) -> bool {
     outcome.verification.action_id == action
+        && !outcome.verification.message.trim().is_empty()
         && outcome.verification.message == verification_message
         && matches!(
             (verification_status, &outcome.verification.status),
@@ -465,6 +466,19 @@ mod tests {
             "refresh_health",
             "verified",
             "different message",
+            &outcome,
+        ));
+    }
+
+    #[test]
+    fn verification_evidence_validation_rejects_blank_message() {
+        let mut outcome = test_verified_outcome();
+        outcome.verification.message = "   ".to_owned();
+
+        assert!(!is_valid_verification_evidence(
+            "refresh_health",
+            "verified",
+            "   ",
             &outcome,
         ));
     }
