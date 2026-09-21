@@ -59,6 +59,7 @@ fn is_valid_outcome_evidence(action: &str, outcome: &AlertActionOutcome) -> bool
         && outcome.verification.action_id == outcome.action_id;
 
     action_matches
+        && !outcome.message.trim().is_empty()
         && match outcome.status {
             AlertActionOutcomeStatus::Verified => {
                 outcome.execution.executed
@@ -375,6 +376,14 @@ mod tests {
     fn outcome_evidence_validation_rejects_mismatched_actions() {
         let mut outcome = test_verified_outcome();
         outcome.execution.action_id = "storage_diagnostic".to_owned();
+
+        assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
+    }
+
+    #[test]
+    fn outcome_evidence_validation_rejects_blank_message() {
+        let mut outcome = test_verified_outcome();
+        outcome.message = "   ".to_owned();
 
         assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
     }
