@@ -19,6 +19,10 @@ pub fn suggest_remediation(
         return Vec::new();
     }
 
+    if status == "failed" && verification_status == "verified" {
+        return Vec::new();
+    }
+
     if status == "failed" || verification_status == "failed" {
         let suggested_action = match action {
             "refresh_health" => "storage_diagnostic",
@@ -100,11 +104,10 @@ mod tests {
     }
 
     #[test]
-    fn failed_status_takes_precedence_over_verified_status() {
+    fn failed_action_with_verified_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "failed", "verified");
 
-        assert_eq!(suggestions.len(), 1);
-        assert_eq!(suggestions[0].suggested_action, "storage_diagnostic");
+        assert!(suggestions.is_empty());
     }
 
     #[test]

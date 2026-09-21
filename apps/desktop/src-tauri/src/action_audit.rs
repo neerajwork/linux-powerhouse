@@ -156,7 +156,8 @@ fn is_valid_stage_reversibility(stage: &str, reversible: bool) -> bool {
 }
 
 fn is_valid_complete_lifecycle(entry: &ActionAuditEntry) -> bool {
-    is_valid_stage_status(&entry.stage, &entry.status)
+    entry.action == entry.outcome_action
+        && is_valid_stage_status(&entry.stage, &entry.status)
         && is_valid_stage_confirmation(&entry.stage, entry.confirmed)
         && is_valid_stage_privilege(&entry.stage, &entry.privilege)
         && is_valid_stage_reversibility(&entry.stage, entry.reversible)
@@ -1276,6 +1277,14 @@ mod tests {
         unconfirmed_entry.confirmed = false;
 
         assert!(!is_valid_complete_lifecycle(&unconfirmed_entry));
+    }
+
+    #[test]
+    fn complete_lifecycle_validation_rejects_mismatched_outcome_action() {
+        let mut entry = test_audit_entry("mismatched-action");
+        entry.outcome_action = "storage_diagnostic".to_owned();
+
+        assert!(!is_valid_complete_lifecycle(&entry));
     }
 
     #[test]
