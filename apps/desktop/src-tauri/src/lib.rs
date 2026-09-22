@@ -541,4 +541,15 @@ mod remediation_command_tests {
         assert_eq!(suggestions[0].suggested_action, "storage_diagnostic");
         assert!(suggestions[0].requires_confirmation);
     }
+
+    #[test]
+    fn remediation_command_preserves_no_suggestion_for_incomplete_action() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "pending".to_owned(),
+            "legacy".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
 }
