@@ -509,3 +509,22 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running Linux Powerhouse");
 }
+
+#[cfg(test)]
+mod remediation_command_tests {
+    use super::action_remediation_suggestions;
+
+    #[test]
+    fn remediation_command_preserves_verified_action_suggestion() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "completed".to_owned(),
+            "verified".to_owned(),
+        );
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].action, "storage_diagnostic");
+        assert_eq!(suggestions[0].suggested_action, "refresh_health");
+        assert!(suggestions[0].requires_confirmation);
+    }
+}
