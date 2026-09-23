@@ -557,6 +557,27 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_preserves_failed_diagnostic_action_suggestions() {
+        for action in [
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ] {
+            let suggestions = action_remediation_suggestions(
+                action.to_owned(),
+                "failed".to_owned(),
+                "failed".to_owned(),
+            );
+
+            assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
+            assert_eq!(suggestions[0].action, action);
+            assert_eq!(suggestions[0].suggested_action, "refresh_health");
+            assert!(suggestions[0].requires_confirmation);
+        }
+    }
+
+    #[test]
     fn remediation_command_preserves_no_suggestion_for_incomplete_action() {
         let suggestions = action_remediation_suggestions(
             "storage_diagnostic".to_owned(),
