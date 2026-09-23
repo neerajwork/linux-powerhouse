@@ -600,6 +600,17 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_rejects_success_action_with_failed_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "success".to_owned(),
+            "failed".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
     fn remediation_command_preserves_no_suggestion_for_incomplete_action() {
         let suggestions = action_remediation_suggestions(
             "storage_diagnostic".to_owned(),
