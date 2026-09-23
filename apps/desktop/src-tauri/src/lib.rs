@@ -563,4 +563,15 @@ mod remediation_command_tests {
 
         assert!(suggestions.is_empty());
     }
+
+    #[test]
+    fn remediation_command_preserves_no_suggestion_for_unknown_verification_status() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "completed".to_owned(),
+            "unknown".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
 }
