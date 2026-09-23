@@ -529,6 +529,20 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_preserves_successful_verified_action_suggestion() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "success".to_owned(),
+            "verified".to_owned(),
+        );
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].action, "storage_diagnostic");
+        assert_eq!(suggestions[0].suggested_action, "refresh_health");
+        assert!(suggestions[0].requires_confirmation);
+    }
+
+    #[test]
     fn remediation_command_preserves_failed_action_suggestion() {
         let suggestions = action_remediation_suggestions(
             "refresh_health".to_owned(),
