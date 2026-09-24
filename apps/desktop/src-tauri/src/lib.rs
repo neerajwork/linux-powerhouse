@@ -653,4 +653,15 @@ mod remediation_command_tests {
 
         assert!(suggestions.is_empty());
     }
+
+    #[test]
+    fn remediation_command_rejects_failed_action_with_legacy_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "failed".to_owned(),
+            "legacy".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
 }
