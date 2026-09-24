@@ -19,7 +19,7 @@ pub fn suggest_remediation(
         return Vec::new();
     }
 
-    if status == "failed" && verification_status == "verified" {
+    if status == "failed" && !matches!(verification_status, "failed") {
         return Vec::new();
     }
 
@@ -116,6 +116,13 @@ mod tests {
     #[test]
     fn failed_action_with_verified_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "failed", "verified");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn failed_action_with_unknown_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "failed", "unknown");
 
         assert!(suggestions.is_empty());
     }
