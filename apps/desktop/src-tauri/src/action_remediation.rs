@@ -156,6 +156,13 @@ mod tests {
     }
 
     #[test]
+    fn failed_action_with_whitespace_padded_failed_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "failed", " failed ");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
     fn successful_action_with_failed_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "completed", "failed");
 
