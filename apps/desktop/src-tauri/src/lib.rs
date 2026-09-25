@@ -706,4 +706,114 @@ mod remediation_command_tests {
 
         assert!(suggestions.is_empty());
     }
+
+    #[test]
+    fn remediation_command_rejects_completed_action_with_legacy_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "completed".to_owned(),
+            "legacy".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_completed_action_with_pending_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "completed".to_owned(),
+            "pending".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_completed_action_with_empty_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "completed".to_owned(),
+            "".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_completed_action_with_whitespace_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "completed".to_owned(),
+            "   ".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_completed_action_with_whitespace_padded_verified_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "completed".to_owned(),
+            " verified ".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_success_action_with_unknown_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "success".to_owned(),
+            "unknown".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_success_action_with_legacy_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "success".to_owned(),
+            "legacy".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_success_action_with_pending_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "success".to_owned(),
+            "pending".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_success_action_with_empty_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "success".to_owned(),
+            "".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn remediation_command_rejects_success_action_with_whitespace_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "success".to_owned(),
+            "   ".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
 }
