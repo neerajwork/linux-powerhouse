@@ -114,6 +114,42 @@ mod tests {
     }
 
     #[test]
+    fn completed_diagnostic_actions_with_verified_verification_suggest_health_refresh() {
+        for action in [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ] {
+            let suggestions = suggest_remediation(action, "completed", "verified");
+
+            assert_eq!(suggestions.len(), 1);
+            assert_eq!(suggestions[0].action, action);
+            assert_eq!(suggestions[0].suggested_action, "refresh_health");
+            assert!(suggestions[0].requires_confirmation);
+        }
+    }
+
+    #[test]
+    fn successful_diagnostic_actions_with_verified_verification_suggest_health_refresh() {
+        for action in [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ] {
+            let suggestions = suggest_remediation(action, "success", "verified");
+
+            assert_eq!(suggestions.len(), 1);
+            assert_eq!(suggestions[0].action, action);
+            assert_eq!(suggestions[0].suggested_action, "refresh_health");
+            assert!(suggestions[0].requires_confirmation);
+        }
+    }
+
+    #[test]
     fn failed_action_with_verified_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "failed", "verified");
 
