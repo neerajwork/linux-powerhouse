@@ -541,6 +541,51 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_preserves_completed_verified_success_reason() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "completed".to_owned(),
+            "verified".to_owned(),
+        );
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].reason,
+            "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state."
+        );
+    }
+
+    #[test]
+    fn remediation_command_preserves_successful_verified_success_reason() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "success".to_owned(),
+            "verified".to_owned(),
+        );
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].reason,
+            "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state."
+        );
+    }
+
+    #[test]
+    fn remediation_command_preserves_failed_action_reason() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "failed".to_owned(),
+            "failed".to_owned(),
+        );
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].reason,
+            "The action did not complete successfully, so a safe follow-up diagnostic is recommended."
+        );
+    }
+
+    #[test]
     fn remediation_command_preserves_completed_verified_diagnostic_actions() {
         for action in [
             "refresh_health",
