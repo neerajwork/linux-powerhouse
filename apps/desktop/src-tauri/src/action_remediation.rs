@@ -189,4 +189,83 @@ mod tests {
 
         assert!(suggestions.is_empty());
     }
+
+    #[test]
+    fn completed_action_with_legacy_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "completed", "legacy");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn completed_action_with_pending_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "completed", "pending");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn completed_action_with_empty_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "completed", "");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn completed_action_with_whitespace_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "completed", "   ");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn completed_action_with_whitespace_padded_verified_verification_has_no_remediation_suggestion()
+    {
+        let suggestions = suggest_remediation("refresh_health", "completed", " verified ");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn successful_action_with_unknown_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "success", "unknown");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn successful_action_with_whitespace_padded_verified_verification_has_no_remediation_suggestion()
+     {
+        let suggestions = suggest_remediation("refresh_health", "success", " verified ");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn successful_action_with_legacy_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "success", "legacy");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn successful_action_with_pending_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "success", "pending");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn successful_action_with_empty_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "success", "");
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn successful_action_with_whitespace_verification_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("refresh_health", "success", "   ");
+
+        assert!(suggestions.is_empty());
+    }
 }
