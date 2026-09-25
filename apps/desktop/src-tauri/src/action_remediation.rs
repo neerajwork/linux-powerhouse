@@ -150,6 +150,39 @@ mod tests {
     }
 
     #[test]
+    fn completed_verified_action_has_success_reason() {
+        let suggestions = suggest_remediation("storage_diagnostic", "completed", "verified");
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].reason,
+            "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state."
+        );
+    }
+
+    #[test]
+    fn successful_verified_action_has_success_reason() {
+        let suggestions = suggest_remediation("storage_diagnostic", "success", "verified");
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].reason,
+            "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state."
+        );
+    }
+
+    #[test]
+    fn failed_action_has_failure_reason() {
+        let suggestions = suggest_remediation("refresh_health", "failed", "failed");
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].reason,
+            "The action did not complete successfully, so a safe follow-up diagnostic is recommended."
+        );
+    }
+
+    #[test]
     fn failed_action_with_verified_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "failed", "verified");
 
