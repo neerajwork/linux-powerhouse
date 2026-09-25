@@ -183,6 +183,29 @@ mod tests {
     }
 
     #[test]
+    fn completed_verified_action_requires_confirmation() {
+        let suggestions = suggest_remediation("storage_diagnostic", "completed", "verified");
+
+        assert_eq!(suggestions.len(), 1);
+        assert!(suggestions[0].requires_confirmation);
+    }
+
+    #[test]
+    fn successful_verified_action_requires_confirmation() {
+        let suggestions = suggest_remediation("storage_diagnostic", "success", "verified");
+
+        assert_eq!(suggestions.len(), 1);
+        assert!(suggestions[0].requires_confirmation);
+    }
+
+    #[test]
+    fn failed_action_requires_confirmation() {
+        let suggestions = suggest_remediation("refresh_health", "failed", "failed");
+
+        assert_eq!(suggestions.len(), 1);
+        assert!(suggestions[0].requires_confirmation);
+    }
+    #[test]
     fn failed_action_with_verified_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "failed", "verified");
 
