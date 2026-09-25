@@ -168,32 +168,33 @@ fn is_valid_complete_lifecycle(entry: &ActionAuditEntry) -> bool {
         && is_valid_verification_outcome_status(&entry.verification_status, &entry.outcome_status)
 }
 
+pub struct ActionAuditRecord<'a> {
+    pub action: &'a str,
+    pub stage: &'a str,
+    pub confirmed: bool,
+    pub status: &'a str,
+    pub message: &'a str,
+    pub reversible: bool,
+    pub privilege: &'a str,
+    pub verification_status: &'a str,
+    pub verification_message: &'a str,
+    pub outcome: &'a AlertActionOutcome,
+}
+
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
 impl ActionAudit {
-    pub fn record(
-        &self,
-        action: &str,
-        stage: &str,
-        confirmed: bool,
-        status: &str,
-        message: &str,
-        reversible: bool,
-        privilege: &str,
-        verification_status: &str,
-        verification_message: &str,
-        outcome: &AlertActionOutcome,
-    ) -> Result<ActionAuditEntry, String> {
-        if !is_valid_outcome_evidence(action, outcome) {
+    pub fn record(&self, record: &ActionAuditRecord<'_>) -> Result<ActionAuditEntry, String> {
+        if !is_valid_outcome_evidence(record.action, record.outcome) {
             return Err("invalid action audit outcome evidence".to_owned());
         }
 
         if !is_valid_verification_evidence(
-            action,
-            verification_status,
-            verification_message,
-            outcome,
+            record.action,
+            record.verification_status,
+            record.verification_message,
+            record.outcome,
         ) {
             return Err("invalid action audit verification evidence".to_owned());
         }
@@ -205,18 +206,18 @@ impl ActionAudit {
         let entry = ActionAuditEntry {
             id: audit_id(),
             timestamp,
-            action: action.to_owned(),
-            stage: stage.to_owned(),
-            confirmed,
-            status: status.to_owned(),
-            message: message.to_owned(),
-            reversible,
-            privilege: privilege.to_owned(),
-            verification_status: verification_status.to_owned(),
-            verification_message: verification_message.to_owned(),
-            outcome_status: outcome_status_label(&outcome.status).to_owned(),
-            outcome_message: outcome.message.clone(),
-            outcome_action: outcome.action_id.clone(),
+            action: record.action.to_owned(),
+            stage: record.stage.to_owned(),
+            confirmed: record.confirmed,
+            status: record.status.to_owned(),
+            message: record.message.to_owned(),
+            reversible: record.reversible,
+            privilege: record.privilege.to_owned(),
+            verification_status: record.verification_status.to_owned(),
+            verification_message: record.verification_message.to_owned(),
+            outcome_status: outcome_status_label(&record.outcome.status).to_owned(),
+            outcome_message: record.outcome.message.clone(),
+            outcome_action: record.outcome.action_id.clone(),
         };
         if !is_valid_audit_entry(&entry) {
             return Err("invalid action audit entry".to_owned());
@@ -275,10 +276,11 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
             continue;
         }
 
-        if let Ok(entry) = serde_json::from_str::<ActionAuditEntry>(&line) {
-            if is_valid_audit_entry(&entry) && seen_ids.insert(entry.id.clone()) {
-                entries.push(entry);
-            }
+        if let Ok(entry) = serde_json::from_str::<ActionAuditEntry>(&line)
+            && is_valid_audit_entry(&entry)
+            && seen_ids.insert(entry.id.clone())
+        {
+            entries.push(entry);
         }
     }
 
@@ -1176,18 +1178,18 @@ mod tests {
         outcome.execution.executed = false;
 
         let error = audit
-            .record(
-                "refresh_health",
-                "verified",
-                true,
-                "success",
-                "action completed",
-                true,
-                "none",
-                "verified",
-                "verification completed",
-                &outcome,
-            )
+            .record(&ActionAuditRecord {
+                action: "refresh_health",
+                stage: "verified",
+                confirmed: true,
+                status: "success",
+                message: "action completed",
+                reversible: true,
+                privilege: "none",
+                verification_status: "verified",
+                verification_message: "verification completed",
+                outcome: &outcome,
+            })
             .unwrap_err();
 
         assert_eq!(error, "invalid action audit outcome evidence");
@@ -1200,18 +1202,18 @@ mod tests {
         outcome.execution.action_id = "storage_diagnostic".to_owned();
 
         let error = audit
-            .record(
-                "refresh_health",
-                "verified",
-                true,
-                "success",
-                "action completed",
-                true,
-                "none",
-                "verified",
-                "verification completed",
-                &outcome,
-            )
+            .record(&ActionAuditRecord {
+                action: "refresh_health",
+                stage: "verified",
+                confirmed: true,
+                status: "success",
+                message: "action completed",
+                reversible: true,
+                privilege: "none",
+                verification_status: "verified",
+                verification_message: "verification completed",
+                outcome: &outcome,
+            })
             .unwrap_err();
 
         assert_eq!(error, "invalid action audit outcome evidence");
@@ -1223,18 +1225,18 @@ mod tests {
         let outcome = test_verified_outcome();
 
         let error = audit
-            .record(
-                "refresh_health",
-                "verified",
-                true,
-                "success",
-                "action completed",
-                true,
-                "none",
-                "failed",
-                "verified",
-                &outcome,
-            )
+            .record(&ActionAuditRecord {
+                action: "refresh_health",
+                stage: "verified",
+                confirmed: true,
+                status: "success",
+                message: "action completed",
+                reversible: true,
+                privilege: "none",
+                verification_status: "failed",
+                verification_message: "verified",
+                outcome: &outcome,
+            })
             .unwrap_err();
 
         assert_eq!(error, "invalid action audit verification evidence");
@@ -1246,18 +1248,18 @@ mod tests {
         let outcome = test_rejected_outcome();
 
         let error = audit
-            .record(
-                "refresh_health",
-                "failed",
-                true,
-                "failed",
-                "action failed",
-                false,
-                "none",
-                "failed",
-                "verification failed",
-                &outcome,
-            )
+            .record(&ActionAuditRecord {
+                action: "refresh_health",
+                stage: "failed",
+                confirmed: true,
+                status: "failed",
+                message: "action failed",
+                reversible: false,
+                privilege: "none",
+                verification_status: "failed",
+                verification_message: "verification failed",
+                outcome: &outcome,
+            })
             .unwrap_err();
 
         assert_eq!(error, "invalid action audit entry");

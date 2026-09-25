@@ -3,7 +3,7 @@ mod action_remediation;
 mod action_verification;
 mod alert_history_store;
 
-use action_audit::{ActionAudit, ActionAuditEntry};
+use action_audit::{ActionAudit, ActionAuditEntry, ActionAuditRecord};
 use action_remediation::{RemediationSuggestion, suggest_remediation};
 use action_verification::verify_safe_action;
 use std::path::PathBuf;
@@ -144,7 +144,7 @@ fn safe_system_action(
 
     let action_name = action.clone();
     let outcome = match action.as_str() {
-        "refresh_health" => execute_unified_system_intelligence(&context(), "/".to_owned())
+        "refresh_health" => execute_unified_system_intelligence(&context(), "/")
             .map(|_| SafeActionResult {
                 action,
                 status: "completed".to_owned(),
@@ -155,21 +155,20 @@ fn safe_system_action(
                 verification_message: String::new(),
             })
             .map_err(|error| error.to_string()),
-        "storage_diagnostic" => execute_storage_analysis(
-            &user_confirmed_context(),
-            "/".to_owned(),
-            ScanLimits::default(),
-        )
-        .map(|_| SafeActionResult {
-            action,
-            status: "completed".to_owned(),
-            message: "Storage diagnostic completed without changing system state.".to_owned(),
-            reversible: true,
-            privilege: "None".to_owned(),
-            verification_status: String::new(),
-            verification_message: String::new(),
-        })
-        .map_err(|error| error.to_string()),
+        "storage_diagnostic" => {
+            execute_storage_analysis(&user_confirmed_context(), "/", ScanLimits::default())
+                .map(|_| SafeActionResult {
+                    action,
+                    status: "completed".to_owned(),
+                    message: "Storage diagnostic completed without changing system state."
+                        .to_owned(),
+                    reversible: true,
+                    privilege: "None".to_owned(),
+                    verification_status: String::new(),
+                    verification_message: String::new(),
+                })
+                .map_err(|error| error.to_string())
+        }
         "process_diagnostic" => execute_process_analysis(&user_confirmed_context())
             .map(|_| SafeActionResult {
                 action,
@@ -236,19 +235,18 @@ fn safe_system_action(
                 },
             );
 
-            state.audit.record(
-                &action_name,
-                "verified",
-                true,
-                &result.status,
-                &result.message,
-                result.reversible,
-                &result.privilege,
-                &verification.status,
-                &verification.message,
-                &outcome,
-            )?;
-
+            state.audit.record(&ActionAuditRecord {
+                action: &action_name,
+                stage: "verified",
+                confirmed: true,
+                status: &result.status,
+                message: &result.message,
+                reversible: result.reversible,
+                privilege: &result.privilege,
+                verification_status: &verification.status,
+                verification_message: &verification.message,
+                outcome: &outcome,
+            })?;
             Ok(result)
         }
         Err(error) => {
@@ -272,18 +270,18 @@ fn safe_system_action(
 
             let outcome = derive_action_outcome(&execution_request, execution, verification_result);
 
-            state.audit.record(
-                &action_name,
-                "failed",
-                true,
-                "failed",
-                &error,
-                false,
-                "Unknown",
-                &verification.status,
-                &verification.message,
-                &outcome,
-            )?;
+            state.audit.record(&ActionAuditRecord {
+                action: &action_name,
+                stage: "failed",
+                confirmed: true,
+                status: "failed",
+                message: &error,
+                reversible: false,
+                privilege: "Unknown",
+                verification_status: &verification.status,
+                verification_message: &verification.message,
+                outcome: &outcome,
+            })?;
 
             Err(error)
         }
