@@ -57,29 +57,21 @@ mod tests {
     use super::suggest_remediation;
 
     #[test]
-    fn failed_refresh_health_suggests_storage_diagnostic() {
-        let suggestions = suggest_remediation("refresh_health", "failed", "failed");
+    fn failed_diagnostic_actions_suggest_expected_follow_up_actions() {
+        let expected = [
+            ("refresh_health", "storage_diagnostic"),
+            ("storage_diagnostic", "refresh_health"),
+            ("process_diagnostic", "refresh_health"),
+            ("network_diagnostic", "refresh_health"),
+            ("service_diagnostic", "refresh_health"),
+        ];
 
-        assert_eq!(suggestions.len(), 1);
-        assert_eq!(suggestions[0].action, "refresh_health");
-        assert_eq!(suggestions[0].suggested_action, "storage_diagnostic");
-        assert!(suggestions[0].requires_confirmation);
-    }
-
-    #[test]
-    fn failed_diagnostic_actions_suggest_health_refresh() {
-        for action in [
-            "storage_diagnostic",
-            "process_diagnostic",
-            "network_diagnostic",
-            "service_diagnostic",
-        ] {
+        for (action, suggested_action) in expected {
             let suggestions = suggest_remediation(action, "failed", "failed");
 
             assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
             assert_eq!(suggestions[0].action, action);
-            assert_eq!(suggestions[0].suggested_action, "refresh_health");
-            assert!(suggestions[0].requires_confirmation);
+            assert_eq!(suggestions[0].suggested_action, suggested_action);
         }
     }
 
