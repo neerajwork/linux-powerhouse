@@ -680,6 +680,29 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_preserves_failed_suggested_actions() {
+        let expected = [
+            ("refresh_health", "storage_diagnostic"),
+            ("storage_diagnostic", "refresh_health"),
+            ("process_diagnostic", "refresh_health"),
+            ("network_diagnostic", "refresh_health"),
+            ("service_diagnostic", "refresh_health"),
+        ];
+
+        for (action, suggested_action) in expected {
+            let suggestions = action_remediation_suggestions(
+                action.to_owned(),
+                "failed".to_owned(),
+                "failed".to_owned(),
+            );
+
+            assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
+            assert_eq!(suggestions[0].action, action);
+            assert_eq!(suggestions[0].suggested_action, suggested_action);
+        }
+    }
+
+    #[test]
     fn remediation_command_preserves_failed_diagnostic_action_suggestions() {
         for action in [
             "storage_diagnostic",
