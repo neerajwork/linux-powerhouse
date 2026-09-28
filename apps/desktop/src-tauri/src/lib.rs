@@ -724,6 +724,20 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_preserves_failed_unknown_action_suggestion() {
+        let suggestions = action_remediation_suggestions(
+            "unknown_action".to_owned(),
+            "failed".to_owned(),
+            "failed".to_owned(),
+        );
+
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].action, "unknown_action");
+        assert_eq!(suggestions[0].suggested_action, "refresh_health");
+        assert!(suggestions[0].requires_confirmation);
+    }
+
+    #[test]
     fn remediation_command_preserves_failed_action_identity() {
         let expected = [
             "refresh_health",
