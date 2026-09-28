@@ -724,6 +724,28 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_preserves_failed_action_identity() {
+        let expected = [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ];
+
+        for action in expected {
+            let suggestions = action_remediation_suggestions(
+                action.to_owned(),
+                "failed".to_owned(),
+                "failed".to_owned(),
+            );
+
+            assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
+            assert_eq!(suggestions[0].action, action);
+        }
+    }
+
+    #[test]
     fn remediation_command_rejects_failed_action_with_verified_verification() {
         let suggestions = action_remediation_suggestions(
             "refresh_health".to_owned(),
