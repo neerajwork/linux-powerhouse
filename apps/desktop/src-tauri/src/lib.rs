@@ -763,6 +763,17 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_rejects_successful_action_with_legacy_verification() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "success".to_owned(),
+            "legacy".to_owned(),
+        );
+
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
     fn remediation_command_preserves_failed_action_identity() {
         let expected = [
             "refresh_health",
