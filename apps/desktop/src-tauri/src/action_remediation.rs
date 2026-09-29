@@ -32,12 +32,26 @@ pub fn suggest_remediation(
             "service_diagnostic" => "refresh_health",
             _ => "refresh_health",
         };
+
         return vec![RemediationSuggestion {
             action: action.to_owned(),
             reason: "The action did not complete successfully, so a safe follow-up diagnostic is recommended.".to_owned(),
             suggested_action: suggested_action.to_owned(),
             requires_confirmation: true,
         }];
+    }
+
+    if verification_status == "verified"
+        && !matches!(
+            action,
+            "refresh_health"
+                | "storage_diagnostic"
+                | "process_diagnostic"
+                | "network_diagnostic"
+                | "service_diagnostic"
+        )
+    {
+        return Vec::new();
     }
 
     if verification_status == "verified" {
@@ -95,6 +109,12 @@ mod tests {
         assert!(suggestions[0].requires_confirmation);
     }
 
+    #[test]
+    fn successful_unknown_action_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("unknown_action", "success", "verified");
+
+        assert!(suggestions.is_empty());
+    }
     #[test]
     fn successful_action_with_verified_verification_suggests_health_refresh() {
         let suggestions = suggest_remediation("storage_diagnostic", "success", "verified");
