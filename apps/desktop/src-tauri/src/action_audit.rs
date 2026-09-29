@@ -73,6 +73,7 @@ fn is_valid_outcome_evidence(action: &str, outcome: &AlertActionOutcome) -> bool
 
     action_matches
         && !outcome.message.trim().is_empty()
+        && is_valid_outcome_message(outcome_status_label(&outcome.status), &outcome.message)
         && match outcome.status {
             AlertActionOutcomeStatus::Verified => {
                 outcome.execution.executed
@@ -402,6 +403,14 @@ mod tests {
     fn outcome_evidence_validation_rejects_blank_message() {
         let mut outcome = test_verified_outcome();
         outcome.message = "   ".to_owned();
+
+        assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
+    }
+
+    #[test]
+    fn outcome_evidence_validation_rejects_non_canonical_message() {
+        let mut outcome = test_verified_outcome();
+        outcome.message = "arbitrary outcome message".to_owned();
 
         assert!(!is_valid_outcome_evidence("refresh_health", &outcome));
     }
