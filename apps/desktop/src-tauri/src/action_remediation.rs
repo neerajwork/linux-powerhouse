@@ -235,6 +235,35 @@ mod tests {
     }
 
     #[test]
+    fn remediation_actions_consistently_require_confirmation() {
+        for (status, verification_status) in [
+            ("completed", "verified"),
+            ("success", "verified"),
+            ("failed", "failed"),
+        ] {
+            for action in [
+                "refresh_health",
+                "storage_diagnostic",
+                "process_diagnostic",
+                "network_diagnostic",
+                "service_diagnostic",
+            ] {
+                let suggestions = suggest_remediation(action, status, verification_status);
+
+                assert_eq!(
+                    suggestions.len(),
+                    1,
+                    "expected one suggestion for {status}/{verification_status}/{action}"
+                );
+                assert!(
+                    suggestions[0].requires_confirmation,
+                    "expected confirmation for {status}/{verification_status}/{action}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn failed_action_requires_confirmation() {
         let suggestions = suggest_remediation("refresh_health", "failed", "failed");
 
