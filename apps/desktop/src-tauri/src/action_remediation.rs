@@ -285,6 +285,24 @@ mod tests {
     }
 
     #[test]
+    fn failed_actions_have_consistent_failure_reason() {
+        let expected_reason = "The action did not complete successfully, so a safe follow-up diagnostic is recommended.";
+
+        for action in [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ] {
+            let suggestions = suggest_remediation(action, "failed", "failed");
+
+            assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
+            assert_eq!(suggestions[0].reason, expected_reason);
+        }
+    }
+
+    #[test]
     fn successful_action_with_failed_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "completed", "failed");
 
