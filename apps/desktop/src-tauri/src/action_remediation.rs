@@ -219,6 +219,55 @@ mod tests {
     }
 
     #[test]
+    fn remediation_actions_have_consistent_suggested_action() {
+        let expected_failed = [
+            ("refresh_health", "storage_diagnostic"),
+            ("storage_diagnostic", "refresh_health"),
+            ("process_diagnostic", "refresh_health"),
+            ("network_diagnostic", "refresh_health"),
+            ("service_diagnostic", "refresh_health"),
+        ];
+
+        let expected_verified = [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ];
+
+        for (action, expected_suggested_action) in expected_failed {
+            let suggestions = suggest_remediation(action, "failed", "failed");
+
+            assert_eq!(
+                suggestions.len(),
+                1,
+                "expected one failed suggestion for {action}"
+            );
+            assert_eq!(
+                suggestions[0].suggested_action, expected_suggested_action,
+                "unexpected failed suggested action for {action}"
+            );
+        }
+
+        for status in ["completed", "success"] {
+            for action in expected_verified {
+                let suggestions = suggest_remediation(action, status, "verified");
+
+                assert_eq!(
+                    suggestions.len(),
+                    1,
+                    "expected one verified suggestion for {status}/{action}"
+                );
+                assert_eq!(
+                    suggestions[0].suggested_action, "refresh_health",
+                    "unexpected verified suggested action for {status}/{action}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn completed_verified_action_requires_confirmation() {
         let suggestions = suggest_remediation("storage_diagnostic", "completed", "verified");
 
