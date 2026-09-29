@@ -53,6 +53,19 @@ fn is_valid_outcome_status(status: &str) -> bool {
     matches!(status, "legacy" | "verified" | "rejected")
 }
 
+fn is_valid_outcome_message(outcome_status: &str, outcome_message: &str) -> bool {
+    matches!(
+        (outcome_status, outcome_message),
+        (
+            "verified",
+            "action execution and verification produced a verified outcome."
+        ) | (
+            "rejected",
+            "action outcome rejected because execution and verification evidence did not establish a verified result."
+        )
+    )
+}
+
 fn is_valid_outcome_evidence(action: &str, outcome: &AlertActionOutcome) -> bool {
     let action_matches = outcome.action_id == action
         && outcome.execution.action_id == outcome.action_id
@@ -261,7 +274,8 @@ fn is_valid_audit_entry(entry: &ActionAuditEntry) -> bool {
         && is_valid_verification_status(&entry.verification_status)
         && (entry.verification_status == "legacy" || !entry.verification_message.trim().is_empty())
         && is_valid_outcome_status(&entry.outcome_status)
-        && (entry.outcome_status == "legacy" || !entry.outcome_message.trim().is_empty())
+        && (entry.outcome_status == "legacy"
+            || is_valid_outcome_message(&entry.outcome_status, &entry.outcome_message))
         && (entry.outcome_status == "legacy"
             || (!entry.outcome_action.trim().is_empty() && entry.action == entry.outcome_action))
 }
@@ -322,7 +336,8 @@ mod tests {
             verification_status: "verified".to_owned(),
             verification_message: "verified".to_owned(),
             outcome_status: "verified".to_owned(),
-            outcome_message: "outcome verified".to_owned(),
+            outcome_message: "action execution and verification produced a verified outcome."
+                .to_owned(),
             outcome_action: "refresh_health".to_owned(),
         }
     }
@@ -341,7 +356,7 @@ mod tests {
                 message: "verified".to_owned(),
             },
             status: AlertActionOutcomeStatus::Verified,
-            message: "outcome verified".to_owned(),
+            message: "action execution and verification produced a verified outcome.".to_owned(),
         }
     }
 
@@ -359,7 +374,7 @@ mod tests {
                 message: "verification failed".to_owned(),
             },
             status: AlertActionOutcomeStatus::Rejected,
-            message: "outcome rejected".to_owned(),
+            message: "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned(),
         }
     }
 
@@ -820,7 +835,7 @@ mod tests {
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
         failed_entry.outcome_status = "rejected".to_owned();
-        failed_entry.outcome_message = "outcome rejected".to_owned();
+        failed_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
         let input = format!("{unknown}\n{current}\n{failed}\n");
@@ -845,7 +860,7 @@ mod tests {
         failed_none_entry.verification_status = "failed".to_owned();
         failed_none_entry.verification_message = "verification failed".to_owned();
         failed_none_entry.outcome_status = "rejected".to_owned();
-        failed_none_entry.outcome_message = "outcome rejected".to_owned();
+        failed_none_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
         let failed_none = serde_json::to_string(&failed_none_entry).unwrap();
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
@@ -871,7 +886,7 @@ mod tests {
         failed_reversible_entry.verification_status = "failed".to_owned();
         failed_reversible_entry.verification_message = "verification failed".to_owned();
         failed_reversible_entry.outcome_status = "rejected".to_owned();
-        failed_reversible_entry.outcome_message = "outcome rejected".to_owned();
+        failed_reversible_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
         let failed_reversible = serde_json::to_string(&failed_reversible_entry).unwrap();
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
@@ -950,7 +965,7 @@ mod tests {
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
         failed_entry.outcome_status = "rejected".to_owned();
-        failed_entry.outcome_message = "outcome rejected".to_owned();
+        failed_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
 
         let failed = serde_json::to_string(&failed_entry).unwrap();
         let verified = serde_json::to_string(&test_audit_entry("verified")).unwrap();
@@ -969,7 +984,7 @@ mod tests {
         inconsistent_entry.verification_status = "failed".to_owned();
         inconsistent_entry.verification_message = "verification failed".to_owned();
         inconsistent_entry.outcome_status = "rejected".to_owned();
-        inconsistent_entry.outcome_message = "outcome rejected".to_owned();
+        inconsistent_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
         let inconsistent = serde_json::to_string(&inconsistent_entry).unwrap();
 
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
@@ -1062,8 +1077,16 @@ mod tests {
         let verified = serde_json::to_string(&test_audit_entry("verified")).unwrap();
 
         let mut rejected_entry = test_audit_entry("rejected");
-        rejected_entry.verification_status = "legacy".to_owned();
+        rejected_entry.stage = "failed".to_owned();
+        rejected_entry.status = "failed".to_owned();
+        rejected_entry.reversible = false;
+        rejected_entry.privilege = "Unknown".to_owned();
+        rejected_entry.verification_status = "failed".to_owned();
+        rejected_entry.verification_message = "verification failed".to_owned();
         rejected_entry.outcome_status = "rejected".to_owned();
+        rejected_entry.outcome_message =
+            "action outcome rejected because execution and verification evidence did not establish a verified result."
+                .to_owned();
         let rejected = serde_json::to_string(&rejected_entry).unwrap();
 
         let input = format!("{unknown}\n{verified}\n{rejected}\n");
@@ -1285,7 +1308,7 @@ mod tests {
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
         failed_entry.outcome_status = "rejected".to_owned();
-        failed_entry.outcome_message = "outcome rejected".to_owned();
+        failed_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
 
         assert!(is_valid_complete_lifecycle(&failed_entry));
     }
@@ -1324,7 +1347,7 @@ mod tests {
         failed_entry.verification_status = "failed".to_owned();
         failed_entry.verification_message = "verification failed".to_owned();
         failed_entry.outcome_status = "rejected".to_owned();
-        failed_entry.outcome_message = "outcome rejected".to_owned();
+        failed_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
 
         assert!(is_valid_audit_entry(&failed_entry));
     }
@@ -1341,6 +1364,48 @@ mod tests {
     fn shared_audit_validation_rejects_blank_outcome_message() {
         let mut entry = test_audit_entry("blank-outcome-message");
         entry.outcome_message = "   ".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
+    fn shared_audit_validation_accepts_canonical_outcome_messages() {
+        assert!(is_valid_audit_entry(&test_audit_entry("verified")));
+
+        let mut rejected_entry = test_audit_entry("rejected");
+        rejected_entry.stage = "failed".to_owned();
+        rejected_entry.status = "failed".to_owned();
+        rejected_entry.reversible = false;
+        rejected_entry.privilege = "Unknown".to_owned();
+        rejected_entry.verification_status = "failed".to_owned();
+        rejected_entry.verification_message = "verification failed".to_owned();
+        rejected_entry.outcome_status = "rejected".to_owned();
+        rejected_entry.outcome_message =
+        "action outcome rejected because execution and verification evidence did not establish a verified result."
+            .to_owned();
+
+        assert!(is_valid_audit_entry(&rejected_entry));
+    }
+
+    #[test]
+    fn shared_audit_validation_rejects_mismatched_verified_outcome_message() {
+        let mut entry = test_audit_entry("mismatched-verified-message");
+        entry.outcome_message = "arbitrary outcome message".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
+    fn shared_audit_validation_rejects_mismatched_rejected_outcome_message() {
+        let mut entry = test_audit_entry("mismatched-rejected-message");
+        entry.stage = "failed".to_owned();
+        entry.status = "failed".to_owned();
+        entry.reversible = false;
+        entry.privilege = "Unknown".to_owned();
+        entry.verification_status = "failed".to_owned();
+        entry.verification_message = "verification failed".to_owned();
+        entry.outcome_status = "rejected".to_owned();
+        entry.outcome_message = "arbitrary outcome message".to_owned();
 
         assert!(!is_valid_audit_entry(&entry));
     }
