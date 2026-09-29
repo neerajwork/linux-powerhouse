@@ -184,6 +184,30 @@ mod tests {
     }
 
     #[test]
+    fn successful_actions_have_consistent_success_reason() {
+        let expected_reason = "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state.";
+
+        for status in ["completed", "success"] {
+            for action in [
+                "refresh_health",
+                "storage_diagnostic",
+                "process_diagnostic",
+                "network_diagnostic",
+                "service_diagnostic",
+            ] {
+                let suggestions = suggest_remediation(action, status, "verified");
+
+                assert_eq!(
+                    suggestions.len(),
+                    1,
+                    "expected one suggestion for {status}/{action}"
+                );
+                assert_eq!(suggestions[0].reason, expected_reason);
+            }
+        }
+    }
+
+    #[test]
     fn failed_action_has_failure_reason() {
         let suggestions = suggest_remediation("refresh_health", "failed", "failed");
 
