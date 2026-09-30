@@ -556,4 +556,27 @@ mod tests {
 
         assert!(suggestions.is_empty());
     }
+
+    #[test]
+    fn successful_and_completed_actions_only_remediate_with_verified_verification() {
+        for status in ["success", "completed"] {
+            for verification_status in [
+                "failed",
+                "pending",
+                "legacy",
+                "unknown",
+                "",
+                "   ",
+                " verified ",
+            ] {
+                let suggestions =
+                    suggest_remediation("refresh_health", status, verification_status);
+
+                assert!(
+                    suggestions.is_empty(),
+                    "expected no remediation for {status}/{verification_status:?}"
+                );
+            }
+        }
+    }
 }
