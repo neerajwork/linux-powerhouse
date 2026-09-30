@@ -579,4 +579,19 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn unsupported_status_never_produces_remediation() {
+        for status in ["unknown", "pending", "running", "cancelled", ""] {
+            for verification_status in ["verified", "failed", "pending", "legacy", "unknown", ""] {
+                let suggestions =
+                    suggest_remediation("refresh_health", status, verification_status);
+
+                assert!(
+                    suggestions.is_empty(),
+                    "expected no remediation for {status:?}/{verification_status:?}"
+                );
+            }
+        }
+    }
 }
