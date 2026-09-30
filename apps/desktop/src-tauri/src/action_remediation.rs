@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct RemediationSuggestion {
     pub action: String,
     pub reason: String,
@@ -264,6 +264,25 @@ mod tests {
                     "unexpected verified suggested action for {status}/{action}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn successful_and_completed_verified_actions_have_consistent_remediation() {
+        for action in [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ] {
+            let completed = suggest_remediation(action, "completed", "verified");
+            let successful = suggest_remediation(action, "success", "verified");
+
+            assert_eq!(
+                completed, successful,
+                "expected identical remediation for completed/success/{action}"
+            );
         }
     }
 
