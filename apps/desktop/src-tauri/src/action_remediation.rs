@@ -90,17 +90,19 @@ mod tests {
     }
 
     #[test]
-    fn failed_unknown_action_suggests_health_refresh() {
-        let suggestions = suggest_remediation("unknown_action", "failed", "failed");
+    fn failed_unknown_actions_suggest_health_refresh() {
+        for action in ["unknown_action", "unsupported_action", "future_action"] {
+            let suggestions = suggest_remediation(action, "failed", "failed");
 
-        assert_eq!(suggestions.len(), 1);
-        assert_eq!(suggestions[0].action, "unknown_action");
-        assert_eq!(suggestions[0].suggested_action, "refresh_health");
-        assert!(suggestions[0].requires_confirmation);
-        assert_eq!(
-            suggestions[0].reason,
-            "The action did not complete successfully, so a safe follow-up diagnostic is recommended."
-        );
+            assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
+            assert_eq!(suggestions[0].action, action);
+            assert_eq!(suggestions[0].suggested_action, "refresh_health");
+            assert!(suggestions[0].requires_confirmation);
+            assert_eq!(
+                suggestions[0].reason,
+                "The action did not complete successfully, so a safe follow-up diagnostic is recommended."
+            );
+        }
     }
 
     #[test]
