@@ -100,6 +100,33 @@ mod tests {
     }
 
     #[test]
+    fn failed_actions_only_remediate_with_failed_verification() {
+        for action in [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ] {
+            let failed = suggest_remediation(action, "failed", "failed");
+            assert_eq!(
+                failed.len(),
+                1,
+                "expected remediation for failed/{action}/failed"
+            );
+
+            for verification_status in ["verified", "pending", "legacy", "unknown", ""] {
+                let suggestions = suggest_remediation(action, "failed", verification_status);
+
+                assert!(
+                    suggestions.is_empty(),
+                    "expected no remediation for failed/{action}/{verification_status:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn verified_action_suggests_health_refresh() {
         let suggestions = suggest_remediation("storage_diagnostic", "completed", "verified");
 
