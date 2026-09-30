@@ -142,6 +142,14 @@ mod tests {
 
         assert!(suggestions.is_empty());
     }
+
+    #[test]
+    fn completed_unknown_action_has_no_remediation_suggestion() {
+        let suggestions = suggest_remediation("unknown_action", "completed", "verified");
+
+        assert!(suggestions.is_empty());
+    }
+
     #[test]
     fn successful_action_with_verified_verification_suggests_health_refresh() {
         let suggestions = suggest_remediation("storage_diagnostic", "success", "verified");
