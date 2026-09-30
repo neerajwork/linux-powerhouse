@@ -90,6 +90,10 @@ mod tests {
             assert_eq!(suggestions[0].action, action);
             assert_eq!(suggestions[0].suggested_action, suggested_action);
             assert!(suggestions[0].requires_confirmation);
+            assert_eq!(
+                suggestions[0].reason,
+                "The action did not complete successfully, so a safe follow-up diagnostic is recommended."
+            );
         }
     }
     #[test]
