@@ -299,6 +299,25 @@ mod tests {
     }
 
     #[test]
+    fn remediation_suggestion_serializes_expected_fields() {
+        let suggestions = suggest_remediation("storage_diagnostic", "success", "verified");
+
+        assert_eq!(suggestions.len(), 1);
+
+        let serialized = serde_json::to_value(&suggestions[0]).expect("expected valid JSON");
+
+        assert_eq!(
+            serialized,
+            serde_json::json!({
+                "action": "storage_diagnostic",
+                "reason": "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state.",
+                "suggested_action": "refresh_health",
+                "requires_confirmation": true,
+            })
+        );
+    }
+
+    #[test]
     fn failed_action_has_failure_reason() {
         let suggestions = suggest_remediation("refresh_health", "failed", "failed");
 
