@@ -472,6 +472,32 @@ mod tests {
     }
 
     #[test]
+    fn failed_actions_have_consistent_remediation_contract() {
+        let expected_reason = "The action did not complete successfully, so a safe follow-up diagnostic is recommended.";
+
+        let expected = [
+            ("refresh_health", "storage_diagnostic"),
+            ("storage_diagnostic", "refresh_health"),
+            ("process_diagnostic", "refresh_health"),
+            ("network_diagnostic", "refresh_health"),
+            ("service_diagnostic", "refresh_health"),
+            ("unknown_action", "refresh_health"),
+            ("unsupported_action", "refresh_health"),
+            ("future_action", "refresh_health"),
+        ];
+
+        for (action, expected_suggested_action) in expected {
+            let suggestions = suggest_remediation(action, "failed", "failed");
+
+            assert_eq!(suggestions.len(), 1, "expected one suggestion for {action}");
+            assert_eq!(suggestions[0].action, action);
+            assert_eq!(suggestions[0].suggested_action, expected_suggested_action);
+            assert_eq!(suggestions[0].reason, expected_reason);
+            assert!(suggestions[0].requires_confirmation);
+        }
+    }
+
+    #[test]
     fn successful_action_with_failed_verification_has_no_remediation_suggestion() {
         let suggestions = suggest_remediation("refresh_health", "completed", "failed");
 
