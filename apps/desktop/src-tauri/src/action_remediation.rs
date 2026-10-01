@@ -164,6 +164,20 @@ mod tests {
     }
 
     #[test]
+    fn unknown_actions_have_no_success_remediation_contract() {
+        for status in ["success", "completed"] {
+            for action in ["unknown_action", "unsupported_action", "future_action"] {
+                let suggestions = suggest_remediation(action, status, "verified");
+
+                assert!(
+                    suggestions.is_empty(),
+                    "expected no remediation for {status}/verified/{action}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn successful_action_with_verified_verification_suggests_health_refresh() {
         let suggestions = suggest_remediation("storage_diagnostic", "success", "verified");
 
