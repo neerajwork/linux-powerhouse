@@ -318,6 +318,25 @@ mod tests {
     }
 
     #[test]
+    fn failed_remediation_suggestion_serializes_expected_fields() {
+        let suggestions = suggest_remediation("storage_diagnostic", "failed", "failed");
+
+        assert_eq!(suggestions.len(), 1);
+
+        let serialized = serde_json::to_value(&suggestions[0]).expect("expected valid JSON");
+
+        assert_eq!(
+            serialized,
+            serde_json::json!({
+                "action": "storage_diagnostic",
+                "reason": "The action did not complete successfully, so a safe follow-up diagnostic is recommended.",
+                "suggested_action": "refresh_health",
+                "requires_confirmation": true,
+            })
+        );
+    }
+
+    #[test]
     fn failed_action_has_failure_reason() {
         let suggestions = suggest_remediation("refresh_health", "failed", "failed");
 
