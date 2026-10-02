@@ -337,6 +337,25 @@ mod tests {
     }
 
     #[test]
+    fn unknown_failed_remediation_serializes_expected_values() {
+        let suggestions = suggest_remediation("unknown_action", "failed", "failed");
+
+        assert_eq!(suggestions.len(), 1);
+
+        let serialized = serde_json::to_value(&suggestions[0]).expect("expected valid JSON");
+
+        assert_eq!(
+            serialized,
+            serde_json::json!({
+                "action": "unknown_action",
+                "reason": "The action did not complete successfully, so a safe follow-up diagnostic is recommended.",
+                "suggested_action": "refresh_health",
+                "requires_confirmation": true,
+            })
+        );
+    }
+
+    #[test]
     fn remediation_suggestions_serialize_consistently_for_supported_actions() {
         let expected_actions = [
             "refresh_health",
