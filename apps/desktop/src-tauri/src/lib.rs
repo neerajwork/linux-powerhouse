@@ -738,6 +738,28 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_failed_unknown_action() {
+        let suggestions = action_remediation_suggestions(
+            "unknown_action".to_owned(),
+            "failed".to_owned(),
+            "failed".to_owned(),
+        );
+
+        let serialized =
+            serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+        assert_eq!(
+            serialized,
+            serde_json::json!([{
+                "action": "unknown_action",
+                "reason": "The action did not complete successfully, so a safe follow-up diagnostic is recommended.",
+                "suggested_action": "refresh_health",
+                "requires_confirmation": true,
+            }])
+        );
+    }
+
+    #[test]
     fn remediation_command_rejects_verified_unknown_action() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
