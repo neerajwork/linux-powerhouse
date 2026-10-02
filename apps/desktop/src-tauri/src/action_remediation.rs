@@ -389,6 +389,61 @@ mod tests {
     }
 
     #[test]
+    fn remediation_suggestions_serialize_consistently_with_expected_values() {
+        let expected = [
+            ("refresh_health", "storage_diagnostic"),
+            ("storage_diagnostic", "refresh_health"),
+            ("process_diagnostic", "refresh_health"),
+            ("network_diagnostic", "refresh_health"),
+            ("service_diagnostic", "refresh_health"),
+        ];
+
+        for (action, failed_suggested_action) in expected {
+            for (status, verification_status, reason, suggested_action) in [
+                (
+                    "success",
+                    "verified",
+                    "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state.",
+                    "refresh_health",
+                ),
+                (
+                    "completed",
+                    "verified",
+                    "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state.",
+                    "refresh_health",
+                ),
+                (
+                    "failed",
+                    "failed",
+                    "The action did not complete successfully, so a safe follow-up diagnostic is recommended.",
+                    failed_suggested_action,
+                ),
+            ] {
+                let suggestions = suggest_remediation(action, status, verification_status);
+
+                assert_eq!(suggestions.len(), 1);
+
+                let serialized =
+                    serde_json::to_value(&suggestions[0]).expect("expected valid JSON");
+
+                assert_eq!(
+                    serialized["action"],
+                    serde_json::Value::String(action.to_owned())
+                );
+                assert_eq!(
+                    serialized["reason"],
+                    serde_json::Value::String(reason.to_owned())
+                );
+                assert_eq!(
+                    serialized["suggested_action"],
+                    serde_json::Value::String(suggested_action.to_owned())
+                );
+                assert_eq!(serialized["requires_confirmation"], true);
+            }
+        }
+    }
+
+    #[test]
     fn failed_action_has_failure_reason() {
         let suggestions = suggest_remediation("refresh_health", "failed", "failed");
 
