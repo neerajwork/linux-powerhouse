@@ -337,6 +337,58 @@ mod tests {
     }
 
     #[test]
+    fn remediation_suggestions_serialize_consistently_for_supported_actions() {
+        let expected_actions = [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ];
+
+        for action in expected_actions {
+            for (status, verification_status) in [
+                ("success", "verified"),
+                ("completed", "verified"),
+                ("failed", "failed"),
+            ] {
+                let suggestions = suggest_remediation(action, status, verification_status);
+
+                assert_eq!(
+                    suggestions.len(),
+                    1,
+                    "expected one suggestion for {status}/{verification_status}/{action}"
+                );
+
+                let serialized =
+                    serde_json::to_value(&suggestions[0]).expect("expected valid JSON");
+
+                let object = serialized
+                    .as_object()
+                    .expect("expected serialized suggestion object");
+
+                assert_eq!(
+                    object.len(),
+                    4,
+                    "unexpected serialized field count for {status}/{verification_status}/{action}"
+                );
+
+                for field in [
+                    "action",
+                    "reason",
+                    "suggested_action",
+                    "requires_confirmation",
+                ] {
+                    assert!(
+                        object.contains_key(field),
+                        "missing serialized field {field} for {status}/{verification_status}/{action}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn failed_action_has_failure_reason() {
         let suggestions = suggest_remediation("refresh_health", "failed", "failed");
 
