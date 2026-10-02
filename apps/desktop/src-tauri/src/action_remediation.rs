@@ -829,4 +829,31 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn no_remediation_serializes_as_empty_array() {
+        for (action, status, verification_status) in [
+            ("refresh_health", "completed", "pending"),
+            ("refresh_health", "failed", "verified"),
+            ("refresh_health", "success", "unknown"),
+            ("refresh_health", "unknown", "verified"),
+            ("unknown_action", "success", "verified"),
+        ] {
+            let suggestions = suggest_remediation(action, status, verification_status);
+
+            assert!(
+                suggestions.is_empty(),
+                "expected no remediation for {action:?}/{status:?}/{verification_status:?}"
+            );
+
+            let serialized =
+                serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+            assert_eq!(
+                serialized,
+                serde_json::json!([]),
+                "expected empty JSON array for {action:?}/{status:?}/{verification_status:?}"
+            );
+        }
+    }
 }
