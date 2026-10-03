@@ -854,6 +854,20 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_confirmation_requirement() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "failed".to_owned(),
+            "failed".to_owned(),
+        );
+
+        let serialized =
+            serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+        assert_eq!(serialized[0]["requires_confirmation"], true);
+    }
+
+    #[test]
     fn remediation_command_rejects_verified_unknown_action() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
