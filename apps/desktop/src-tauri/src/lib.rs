@@ -796,6 +796,28 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_completed_verified_action() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "completed".to_owned(),
+            "verified".to_owned(),
+        );
+
+        let serialized =
+            serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+        assert_eq!(
+            serialized,
+            serde_json::json!([{
+                "action": "storage_diagnostic",
+                "reason": "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state.",
+                "suggested_action": "refresh_health",
+                "requires_confirmation": true,
+            }])
+        );
+    }
+
+    #[test]
     fn remediation_command_rejects_verified_unknown_action() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
