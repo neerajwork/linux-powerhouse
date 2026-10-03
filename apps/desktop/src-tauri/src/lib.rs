@@ -760,6 +760,20 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_no_suggestion_as_empty_array() {
+        let suggestions = action_remediation_suggestions(
+            "refresh_health".to_owned(),
+            "completed".to_owned(),
+            "pending".to_owned(),
+        );
+
+        let serialized =
+            serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+        assert_eq!(serialized, serde_json::json!([]));
+    }
+
+    #[test]
     fn remediation_command_rejects_verified_unknown_action() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
