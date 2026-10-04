@@ -938,6 +938,23 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_successful_reason() {
+        let suggestions = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "success".to_owned(),
+            "verified".to_owned(),
+        );
+
+        let serialized =
+            serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+        assert_eq!(
+            serialized[0]["reason"],
+            "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state."
+        );
+    }
+
+    #[test]
     fn remediation_command_rejects_successful_unknown_verification() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
