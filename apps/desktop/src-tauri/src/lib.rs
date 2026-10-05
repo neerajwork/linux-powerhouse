@@ -1028,6 +1028,28 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_successful_and_completed_verified_actions_consistently() {
+        let successful = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "success".to_owned(),
+            "verified".to_owned(),
+        );
+
+        let completed = action_remediation_suggestions(
+            "storage_diagnostic".to_owned(),
+            "completed".to_owned(),
+            "verified".to_owned(),
+        );
+
+        let successful_serialized =
+            serde_json::to_value(&successful).expect("expected valid JSON serialization");
+        let completed_serialized =
+            serde_json::to_value(&completed).expect("expected valid JSON serialization");
+
+        assert_eq!(successful_serialized, completed_serialized);
+    }
+
+    #[test]
     fn remediation_command_rejects_successful_unknown_verification() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
