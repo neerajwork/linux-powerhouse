@@ -774,6 +774,40 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_rejected_remediation_as_empty_array() {
+        let rejected_cases = [
+            ("failed", "verified"),
+            ("failed", "unknown"),
+            ("failed", "legacy"),
+            ("failed", "pending"),
+            ("failed", ""),
+            ("failed", " "),
+            ("completed", "legacy"),
+            ("completed", "pending"),
+            ("completed", ""),
+            ("completed", " "),
+            ("success", "unknown"),
+            ("success", "legacy"),
+            ("success", "pending"),
+            ("success", ""),
+            ("success", " "),
+        ];
+
+        for (status, verification_status) in rejected_cases {
+            let suggestions = action_remediation_suggestions(
+                "storage_diagnostic".to_owned(),
+                status.to_owned(),
+                verification_status.to_owned(),
+            );
+
+            let serialized =
+                serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+            assert_eq!(serialized, serde_json::json!([]));
+        }
+    }
+
+    #[test]
     fn remediation_command_serializes_successful_verified_action() {
         let suggestions = action_remediation_suggestions(
             "storage_diagnostic".to_owned(),
