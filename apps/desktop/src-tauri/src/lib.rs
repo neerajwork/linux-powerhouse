@@ -1084,6 +1084,46 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_successful_and_completed_actions_with_expected_values() {
+        let actions = [
+            "refresh_health",
+            "storage_diagnostic",
+            "process_diagnostic",
+            "network_diagnostic",
+            "service_diagnostic",
+        ];
+
+        for action in actions {
+            let successful_suggestions = action_remediation_suggestions(
+                action.to_owned(),
+                "success".to_owned(),
+                "verified".to_owned(),
+            );
+
+            let completed_suggestions = action_remediation_suggestions(
+                action.to_owned(),
+                "completed".to_owned(),
+                "verified".to_owned(),
+            );
+
+            let successful_serialized = serde_json::to_value(&successful_suggestions)
+                .expect("expected valid JSON serialization");
+            let completed_serialized = serde_json::to_value(&completed_suggestions)
+                .expect("expected valid JSON serialization");
+
+            let expected = serde_json::json!([{
+                "action": action,
+                "reason": "The read-only action completed successfully; a fresh health refresh can confirm the latest overall state.",
+                "suggested_action": "refresh_health",
+                "requires_confirmation": true,
+            }]);
+
+            assert_eq!(successful_serialized, expected);
+            assert_eq!(completed_serialized, expected);
+        }
+    }
+
+    #[test]
     fn remediation_command_rejects_successful_unknown_verification() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
