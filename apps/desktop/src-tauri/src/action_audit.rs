@@ -1349,6 +1349,22 @@ mod tests {
     }
 
     #[test]
+    fn history_propagates_non_not_found_file_errors() {
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-error-{}", Uuid::new_v4()));
+        let file = root.join("audit-parent");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, b"not a directory").unwrap();
+
+        let error = read_audit_history(&file.join("action-audit.jsonl")).unwrap_err();
+
+        assert!(!error.is_empty());
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_rejects_invalid_outcome_evidence_before_audit_validation() {
         let audit = ActionAudit;
         let mut outcome = test_verified_outcome();
