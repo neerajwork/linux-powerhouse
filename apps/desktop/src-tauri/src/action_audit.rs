@@ -1365,6 +1365,38 @@ mod tests {
     }
 
     #[test]
+    fn history_preserves_valid_records_in_mixed_audit_file() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-mixed-history-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let first = test_audit_entry("mixed-history-first");
+        let second = test_audit_entry("mixed-history-second");
+
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+
+        let input = format!(
+            "{first_line}\n\
+         not-valid-json\n\
+         \n\
+         {first_line}\n\
+         {second_line}\n"
+        );
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, second]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_rejects_invalid_outcome_evidence_before_audit_validation() {
         let audit = ActionAudit;
         let mut outcome = test_verified_outcome();
