@@ -1050,6 +1050,40 @@ mod remediation_command_tests {
     }
 
     #[test]
+    fn remediation_command_serializes_failed_actions_with_expected_values() {
+        let expected = [
+            ("refresh_health", "storage_diagnostic"),
+            ("storage_diagnostic", "refresh_health"),
+            ("process_diagnostic", "refresh_health"),
+            ("network_diagnostic", "refresh_health"),
+            ("service_diagnostic", "refresh_health"),
+        ];
+
+        for (action, suggested_action) in expected {
+            let suggestions = action_remediation_suggestions(
+                action.to_owned(),
+                "failed".to_owned(),
+                "failed".to_owned(),
+            );
+
+            assert_eq!(suggestions.len(), 1);
+
+            let serialized =
+                serde_json::to_value(&suggestions).expect("expected valid JSON serialization");
+
+            assert_eq!(
+                serialized,
+                serde_json::json!([{
+                    "action": action,
+                    "reason": "The action did not complete successfully, so a safe follow-up diagnostic is recommended.",
+                    "suggested_action": suggested_action,
+                    "requires_confirmation": true,
+                }])
+            );
+        }
+    }
+
+    #[test]
     fn remediation_command_rejects_successful_unknown_verification() {
         let suggestions = action_remediation_suggestions(
             "unknown_action".to_owned(),
