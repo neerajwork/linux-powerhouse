@@ -257,6 +257,15 @@ fn record_audit_entry(
     Ok(entry)
 }
 
+fn read_audit_history(path: &Path) -> Result<Vec<ActionAuditEntry>, String> {
+    let file = match fs::File::open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(error.to_string()),
+    };
+    parse_audit_entries(BufReader::new(file))
+}
+
 impl ActionAudit {
     pub fn record(&self, record: &ActionAuditRecord<'_>) -> Result<ActionAuditEntry, String> {
         let path = audit_path()?;
@@ -265,12 +274,7 @@ impl ActionAudit {
 
     pub fn history(&self) -> Result<Vec<ActionAuditEntry>, String> {
         let path = audit_path()?;
-        let file = match fs::File::open(path) {
-            Ok(file) => file,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(error) => return Err(error.to_string()),
-        };
-        parse_audit_entries(BufReader::new(file))
+        read_audit_history(&path)
     }
 }
 
@@ -1293,6 +1297,35 @@ mod tests {
 
         let contents = std::fs::File::open(&file).unwrap();
         let history = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(history, vec![entry]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn history_reads_successful_audit_entries_through_history_boundary() {
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-history-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        let outcome = test_verified_outcome();
+
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let entry = record_audit_entry(&record, &file).unwrap();
+        let history = read_audit_history(&file).unwrap();
 
         assert_eq!(history, vec![entry]);
 
