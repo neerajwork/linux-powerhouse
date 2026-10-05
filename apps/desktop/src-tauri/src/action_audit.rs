@@ -1333,6 +1333,22 @@ mod tests {
     }
 
     #[test]
+    fn history_returns_empty_when_audit_file_is_missing() {
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-missing-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        assert!(!file.exists());
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert!(history.is_empty());
+        assert!(!file.exists());
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_rejects_invalid_outcome_evidence_before_audit_validation() {
         let audit = ActionAudit;
         let mut outcome = test_verified_outcome();
