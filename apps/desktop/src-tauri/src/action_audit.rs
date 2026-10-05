@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
@@ -198,57 +198,69 @@ pub struct ActionAuditRecord<'a> {
 #[derive(Clone, Default)]
 pub struct ActionAudit;
 
+fn record_audit_entry(
+    record: &ActionAuditRecord<'_>,
+    path: &Path,
+) -> Result<ActionAuditEntry, String> {
+    if !is_valid_outcome_evidence(record.action, record.outcome) {
+        return Err("invalid action audit outcome evidence".to_owned());
+    }
+
+    if !is_valid_verification_evidence(
+        record.action,
+        record.verification_status,
+        record.verification_message,
+        record.outcome,
+    ) {
+        return Err("invalid action audit verification evidence".to_owned());
+    }
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| "system clock is before the Unix epoch".to_owned())?
+        .as_millis() as u64;
+
+    let entry = ActionAuditEntry {
+        id: audit_id(),
+        timestamp,
+        action: record.action.to_owned(),
+        stage: record.stage.to_owned(),
+        confirmed: record.confirmed,
+        status: record.status.to_owned(),
+        message: record.message.to_owned(),
+        reversible: record.reversible,
+        privilege: record.privilege.to_owned(),
+        verification_status: record.verification_status.to_owned(),
+        verification_message: record.verification_message.to_owned(),
+        outcome_status: outcome_status_label(&record.outcome.status).to_owned(),
+        outcome_message: record.outcome.message.clone(),
+        outcome_action: record.outcome.action_id.clone(),
+    };
+
+    if !is_valid_audit_entry(&entry) {
+        return Err("invalid action audit entry".to_owned());
+    }
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|error| error.to_string())?;
+
+    let line = serde_json::to_string(&entry).map_err(|error| error.to_string())?;
+    writeln!(file, "{line}").map_err(|error| error.to_string())?;
+
+    Ok(entry)
+}
+
 impl ActionAudit {
     pub fn record(&self, record: &ActionAuditRecord<'_>) -> Result<ActionAuditEntry, String> {
-        if !is_valid_outcome_evidence(record.action, record.outcome) {
-            return Err("invalid action audit outcome evidence".to_owned());
-        }
-
-        if !is_valid_verification_evidence(
-            record.action,
-            record.verification_status,
-            record.verification_message,
-            record.outcome,
-        ) {
-            return Err("invalid action audit verification evidence".to_owned());
-        }
-
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| "system clock is before the Unix epoch".to_owned())?
-            .as_millis() as u64;
-        let entry = ActionAuditEntry {
-            id: audit_id(),
-            timestamp,
-            action: record.action.to_owned(),
-            stage: record.stage.to_owned(),
-            confirmed: record.confirmed,
-            status: record.status.to_owned(),
-            message: record.message.to_owned(),
-            reversible: record.reversible,
-            privilege: record.privilege.to_owned(),
-            verification_status: record.verification_status.to_owned(),
-            verification_message: record.verification_message.to_owned(),
-            outcome_status: outcome_status_label(&record.outcome.status).to_owned(),
-            outcome_message: record.outcome.message.clone(),
-            outcome_action: record.outcome.action_id.clone(),
-        };
-        if !is_valid_audit_entry(&entry) {
-            return Err("invalid action audit entry".to_owned());
-        }
-
         let path = audit_path()?;
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-        }
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-            .map_err(|error| error.to_string())?;
-        let line = serde_json::to_string(&entry).map_err(|error| error.to_string())?;
-        writeln!(file, "{line}").map_err(|error| error.to_string())?;
-        Ok(entry)
+        record_audit_entry(record, &path)
     }
 
     pub fn history(&self) -> Result<Vec<ActionAuditEntry>, String> {
@@ -1231,6 +1243,53 @@ mod tests {
 
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(&file, format!("{line}\n")).unwrap();
+
+        let contents = std::fs::File::open(&file).unwrap();
+        let history = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(history, vec![entry]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn record_persists_successful_audit_entry_through_recording_boundary() {
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-record-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        let outcome = test_verified_outcome();
+
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let entry = record_audit_entry(&record, &file).unwrap();
+
+        assert_eq!(entry.action, "refresh_health");
+        assert_eq!(entry.stage, "verified");
+        assert!(entry.confirmed);
+        assert_eq!(entry.status, "success");
+        assert_eq!(entry.message, "action completed");
+        assert!(entry.reversible);
+        assert_eq!(entry.privilege, "none");
+        assert_eq!(entry.verification_status, "verified");
+        assert_eq!(entry.verification_message, "verified");
+        assert_eq!(entry.outcome_status, "verified");
+        assert_eq!(
+            entry.outcome_message,
+            "action execution and verification produced a verified outcome."
+        );
+        assert_eq!(entry.outcome_action, "refresh_health");
 
         let contents = std::fs::File::open(&file).unwrap();
         let history = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
