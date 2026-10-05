@@ -1176,6 +1176,22 @@ mod tests {
     }
 
     #[test]
+    fn legacy_audit_records_bypass_new_lifecycle_validation() {
+        let input = r#"{"id":"legacy-invalid-lifecycle","timestamp":123,"action":"unknown_action","stage":"unknown_stage","confirmed":false,"status":"failed","message":"legacy message","reversible":true,"privilege":"none","verification_status":"legacy","verification_message":"","outcome_status":"legacy","outcome_message":"","outcome_action":"different_action"}"#;
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "legacy-invalid-lifecycle");
+        assert_eq!(entries[0].action, "unknown_action");
+        assert_eq!(entries[0].stage, "unknown_stage");
+        assert!(!entries[0].confirmed);
+        assert_eq!(entries[0].outcome_action, "different_action");
+        assert_eq!(entries[0].verification_status, "legacy");
+        assert_eq!(entries[0].outcome_status, "legacy");
+    }
+
+    #[test]
     fn audit_ids_are_unique_and_use_the_action_prefix() {
         let first = audit_id();
         let second = audit_id();
