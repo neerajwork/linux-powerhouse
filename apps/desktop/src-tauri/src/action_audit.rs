@@ -1366,6 +1366,36 @@ mod tests {
     }
 
     #[test]
+    fn complete_lifecycle_validation_rejects_invalid_lifecycle_invariants() {
+        let mut invalid_privilege = test_audit_entry("invalid-privilege");
+        invalid_privilege.privilege = "Unknown".to_owned();
+        assert!(!is_valid_complete_lifecycle(&invalid_privilege));
+
+        let mut invalid_reversibility = test_audit_entry("invalid-reversibility");
+        invalid_reversibility.reversible = false;
+        assert!(!is_valid_complete_lifecycle(&invalid_reversibility));
+
+        let mut invalid_verification_status = test_audit_entry("invalid-verification-status");
+        invalid_verification_status.verification_status = "failed".to_owned();
+        assert!(!is_valid_complete_lifecycle(&invalid_verification_status));
+
+        let mut invalid_outcome_status = test_audit_entry("invalid-outcome-status");
+        invalid_outcome_status.outcome_status = "rejected".to_owned();
+        invalid_outcome_status.outcome_message =
+        "action outcome rejected because execution and verification evidence did not establish a verified result."
+            .to_owned();
+        assert!(!is_valid_complete_lifecycle(&invalid_outcome_status));
+
+        let mut invalid_verification_outcome = test_audit_entry("invalid-verification-outcome");
+        invalid_verification_outcome.outcome_status = "rejected".to_owned();
+        invalid_verification_outcome.outcome_message =
+        "action outcome rejected because execution and verification evidence did not establish a verified result."
+            .to_owned();
+        invalid_verification_outcome.verification_status = "verified".to_owned();
+        assert!(!is_valid_complete_lifecycle(&invalid_verification_outcome));
+    }
+
+    #[test]
     fn shared_audit_validation_accepts_supported_verified_and_failed_paths() {
         assert!(is_valid_audit_entry(&test_audit_entry("verified")));
 
