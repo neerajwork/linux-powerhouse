@@ -318,26 +318,74 @@ fn parse_audit_entries<R: BufRead>(reader: R) -> Result<Vec<ActionAuditEntry>, S
     Ok(entries)
 }
 
-fn audit_path() -> Result<PathBuf, String> {
-    if let Ok(state_home) = std::env::var("XDG_STATE_HOME") {
+fn audit_path_from_environment(
+    state_home: Option<&str>,
+    home: Option<&str>,
+) -> Result<PathBuf, String> {
+    if let Some(state_home) = state_home {
         return Ok(PathBuf::from(state_home)
             .join("linux-powerhouse")
             .join("action-audit.jsonl"));
     }
-    if let Ok(home) = std::env::var("HOME") {
+
+    if let Some(home) = home {
         return Ok(PathBuf::from(home)
             .join(".local")
             .join("state")
             .join("linux-powerhouse")
             .join("action-audit.jsonl"));
     }
+
     Err("unable to determine a local state directory for the action audit".to_owned())
+}
+
+fn audit_path() -> Result<PathBuf, String> {
+    audit_path_from_environment(
+        std::env::var("XDG_STATE_HOME").ok().as_deref(),
+        std::env::var("HOME").ok().as_deref(),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn audit_path_prefers_xdg_state_home() {
+        let path = audit_path_from_environment(Some("/tmp/state"), Some("/tmp/home")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
+    fn audit_path_falls_back_to_home() {
+        let path = audit_path_from_environment(None, Some("/tmp/home")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/home")
+                .join(".local")
+                .join("state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
+    fn audit_path_requires_a_local_state_directory() {
+        let error = audit_path_from_environment(None, None).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
 
     fn test_audit_entry(id: &str) -> ActionAuditEntry {
         ActionAuditEntry {
