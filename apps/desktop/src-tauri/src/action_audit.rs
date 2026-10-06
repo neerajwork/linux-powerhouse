@@ -598,6 +598,29 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_reader_errors() {
+        struct FailingReader;
+
+        impl std::io::Read for FailingReader {
+            fn read(&mut self, _buffer: &mut [u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::other("simulated audit reader failure"))
+            }
+        }
+
+        impl std::io::BufRead for FailingReader {
+            fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+                Err(std::io::Error::other("simulated audit reader failure"))
+            }
+
+            fn consume(&mut self, _amount: usize) {}
+        }
+
+        let error = parse_audit_entries(FailingReader).unwrap_err();
+
+        assert_eq!(error, "simulated audit reader failure");
+    }
+
+    #[test]
     fn duplicate_audit_ids_keep_first_record_without_hiding_unique_history() {
         let first_entry = test_audit_entry("first");
         let mut duplicate_entry = test_audit_entry("first");
