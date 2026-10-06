@@ -1392,6 +1392,50 @@ mod tests {
     }
 
     #[test]
+    fn record_appends_multiple_audit_entries_without_overwriting_history() {
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-append-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        let outcome = test_verified_outcome();
+
+        let first_record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "first action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let second_record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "second action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let first = record_audit_entry(&first_record, &file).unwrap();
+        let second = record_audit_entry(&second_record, &file).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, second]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_propagates_audit_path_filesystem_errors() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-record-error-{}",
