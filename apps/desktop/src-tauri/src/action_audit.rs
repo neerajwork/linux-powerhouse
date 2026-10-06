@@ -1352,6 +1352,40 @@ mod tests {
     }
 
     #[test]
+    fn record_propagates_audit_path_filesystem_errors() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-record-error-{}",
+            Uuid::new_v4()
+        ));
+        let parent = root.join("audit-parent");
+        let file = parent.join("action-audit.jsonl");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&parent, b"not a directory").unwrap();
+
+        let outcome = test_verified_outcome();
+
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let error = record_audit_entry(&record, &file).unwrap_err();
+
+        assert!(!error.is_empty());
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_reads_successful_audit_entries_through_history_boundary() {
         let root =
             std::env::temp_dir().join(format!("linux-powerhouse-audit-history-{}", Uuid::new_v4()));
