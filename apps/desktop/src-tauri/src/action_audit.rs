@@ -1327,6 +1327,27 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_audit_ids_are_ignored_without_hiding_valid_history() {
+        let first = test_audit_entry("duplicate-first");
+        let duplicate = first.clone();
+        let second = test_audit_entry("duplicate-second");
+
+        let first_line = serde_json::to_string(&first).unwrap();
+        let duplicate_line = serde_json::to_string(&duplicate).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+
+        let input = format!(
+            "{first_line}\n\
+         {duplicate_line}\n\
+         {second_line}\n"
+        );
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![first, second]);
+    }
+
+    #[test]
     fn recorded_audit_entries_round_trip_through_persistence_format() {
         let entry = test_audit_entry("round-trip");
         let line = serde_json::to_string(&entry).unwrap();
