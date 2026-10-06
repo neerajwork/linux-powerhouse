@@ -1392,6 +1392,53 @@ mod tests {
     }
 
     #[test]
+    fn record_persists_failed_audit_entry_through_recording_boundary() {
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-failed-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        let outcome = test_rejected_outcome();
+
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "failed",
+            confirmed: true,
+            status: "failed",
+            message: "action failed",
+            reversible: false,
+            privilege: "Unknown",
+            verification_status: "failed",
+            verification_message: "verification failed",
+            outcome: &outcome,
+        };
+
+        let entry = record_audit_entry(&record, &file).unwrap();
+
+        assert_eq!(entry.action, "refresh_health");
+        assert_eq!(entry.stage, "failed");
+        assert!(entry.confirmed);
+        assert_eq!(entry.status, "failed");
+        assert_eq!(entry.message, "action failed");
+        assert!(!entry.reversible);
+        assert_eq!(entry.privilege, "Unknown");
+        assert_eq!(entry.verification_status, "failed");
+        assert_eq!(entry.verification_message, "verification failed");
+        assert_eq!(entry.outcome_status, "rejected");
+        assert_eq!(
+            entry.outcome_message,
+            "action outcome rejected because execution and verification evidence did not establish a verified result."
+        );
+        assert_eq!(entry.outcome_action, "refresh_health");
+
+        let contents = std::fs::File::open(&file).unwrap();
+        let history = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(history, vec![entry]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_appends_multiple_audit_entries_without_overwriting_history() {
         let root =
             std::env::temp_dir().join(format!("linux-powerhouse-audit-append-{}", Uuid::new_v4()));
