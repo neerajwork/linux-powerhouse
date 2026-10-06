@@ -1418,6 +1418,30 @@ mod tests {
     }
 
     #[test]
+    fn record_propagates_audit_file_write_errors() {
+        let file = Path::new("/dev/full");
+
+        let outcome = test_verified_outcome();
+
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let error = record_audit_entry(&record, file).unwrap_err();
+
+        assert!(!error.is_empty());
+    }
+
+    #[test]
     fn history_reads_successful_audit_entries_through_history_boundary() {
         let root =
             std::env::temp_dir().join(format!("linux-powerhouse-audit-history-{}", Uuid::new_v4()));
