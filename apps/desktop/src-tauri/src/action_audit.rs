@@ -1947,6 +1947,14 @@ mod tests {
     }
 
     #[test]
+    fn shared_audit_validation_rejects_zero_timestamp() {
+        let mut entry = test_audit_entry("zero-timestamp");
+        entry.timestamp = 0;
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
     fn shared_audit_validation_rejects_blank_verification_message() {
         let mut entry = test_audit_entry("blank-verification-message");
         entry.verification_message = "   ".to_owned();
