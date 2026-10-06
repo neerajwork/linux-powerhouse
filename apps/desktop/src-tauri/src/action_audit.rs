@@ -1807,6 +1807,29 @@ mod tests {
     }
 
     #[test]
+    fn record_rejects_mismatched_verification_message_before_audit_validation() {
+        let audit = ActionAudit;
+        let outcome = test_verified_outcome();
+
+        let error = audit
+            .record(&ActionAuditRecord {
+                action: "refresh_health",
+                stage: "verified",
+                confirmed: true,
+                status: "success",
+                message: "action completed",
+                reversible: true,
+                privilege: "none",
+                verification_status: "verified",
+                verification_message: "different verification message",
+                outcome: &outcome,
+            })
+            .unwrap_err();
+
+        assert_eq!(error, "invalid action audit verification evidence");
+    }
+
+    #[test]
     fn record_rejects_entries_that_fail_audit_validation() {
         let audit = ActionAudit;
         let outcome = test_rejected_outcome();
