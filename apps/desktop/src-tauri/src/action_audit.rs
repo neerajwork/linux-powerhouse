@@ -1602,6 +1602,55 @@ mod tests {
     }
 
     #[test]
+    fn history_reads_failed_audit_entries_through_history_boundary() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-failed-history-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let outcome = test_rejected_outcome();
+
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "failed",
+            confirmed: true,
+            status: "failed",
+            message: "action failed",
+            reversible: false,
+            privilege: "Unknown",
+            verification_status: "failed",
+            verification_message: "verification failed",
+            outcome: &outcome,
+        };
+
+        let entry = record_audit_entry(&record, &file).unwrap();
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![entry.clone()]);
+
+        let persisted = &history[0];
+
+        assert_eq!(persisted.action, "refresh_health");
+        assert_eq!(persisted.stage, "failed");
+        assert!(persisted.confirmed);
+        assert_eq!(persisted.status, "failed");
+        assert_eq!(persisted.message, "action failed");
+        assert!(!persisted.reversible);
+        assert_eq!(persisted.privilege, "Unknown");
+        assert_eq!(persisted.verification_status, "failed");
+        assert_eq!(persisted.verification_message, "verification failed");
+        assert_eq!(persisted.outcome_status, "rejected");
+        assert_eq!(
+            persisted.outcome_message,
+            "action outcome rejected because execution and verification evidence did not establish a verified result."
+        );
+        assert_eq!(persisted.outcome_action, "refresh_health");
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_returns_empty_when_audit_file_is_missing() {
         let root =
             std::env::temp_dir().join(format!("linux-powerhouse-audit-missing-{}", Uuid::new_v4()));
