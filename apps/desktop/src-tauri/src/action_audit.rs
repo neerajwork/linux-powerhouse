@@ -1955,6 +1955,14 @@ mod tests {
     }
 
     #[test]
+    fn shared_audit_validation_rejects_blank_audit_id() {
+        let mut entry = test_audit_entry("blank-audit-id");
+        entry.id = "   ".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
     fn shared_audit_validation_rejects_blank_verification_message() {
         let mut entry = test_audit_entry("blank-verification-message");
         entry.verification_message = "   ".to_owned();
