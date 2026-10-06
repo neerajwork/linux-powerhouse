@@ -621,6 +621,23 @@ mod tests {
     }
 
     #[test]
+    fn history_propagates_audit_file_read_errors() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-history-read-error-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let path = root.join("action-audit.jsonl");
+
+        std::fs::create_dir_all(&path).unwrap();
+
+        let error = read_audit_history(&path).unwrap_err();
+
+        assert!(!error.is_empty());
+
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn duplicate_audit_ids_keep_first_record_without_hiding_unique_history() {
         let first_entry = test_audit_entry("first");
         let mut duplicate_entry = test_audit_entry("first");
