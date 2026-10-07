@@ -2035,6 +2035,14 @@ mod tests {
     }
 
     #[test]
+    fn shared_audit_validation_rejects_blank_audit_outcome_action() {
+        let mut entry = test_audit_entry("blank-audit-outcome-action");
+        entry.outcome_action = "   ".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
     fn shared_audit_validation_accepts_canonical_outcome_messages() {
         assert!(is_valid_audit_entry(&test_audit_entry("verified")));
 
