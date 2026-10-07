@@ -1987,6 +1987,14 @@ mod tests {
     }
 
     #[test]
+    fn shared_audit_validation_rejects_invalid_audit_stage() {
+        let mut entry = test_audit_entry("invalid-audit-stage");
+        entry.stage = "unknown_stage".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
     fn shared_audit_validation_rejects_blank_audit_status() {
         let mut entry = test_audit_entry("blank-audit-status");
         entry.status = "   ".to_owned();
