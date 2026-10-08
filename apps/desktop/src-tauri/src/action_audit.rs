@@ -2067,6 +2067,14 @@ mod tests {
     }
 
     #[test]
+    fn shared_audit_validation_rejects_invalid_audit_outcome_status() {
+        let mut entry = test_audit_entry("invalid-audit-outcome-status");
+        entry.outcome_status = "unknown_outcome_status".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
     fn shared_audit_validation_rejects_blank_outcome_message() {
         let mut entry = test_audit_entry("blank-outcome-message");
         entry.outcome_message = "   ".to_owned();
