@@ -291,6 +291,7 @@ fn is_valid_audit_entry(entry: &ActionAuditEntry) -> bool {
         && is_valid_verification_status(&entry.verification_status)
         && (entry.verification_status == "legacy" || !entry.verification_message.trim().is_empty())
         && is_valid_outcome_status(&entry.outcome_status)
+        && (entry.verification_status != "legacy" || entry.outcome_status == "legacy")
         && (entry.outcome_status == "legacy"
             || is_valid_outcome_message(&entry.outcome_status, &entry.outcome_message))
         && (entry.outcome_status == "legacy"
@@ -770,6 +771,7 @@ mod tests {
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
         failed_entry.verification_status = "legacy".to_owned();
+        failed_entry.outcome_status = "legacy".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
         let input = format!("{unknown}\n{verified}\n{failed}\n");
@@ -843,6 +845,7 @@ mod tests {
         failed_failed_entry.stage = "failed".to_owned();
         failed_failed_entry.status = "failed".to_owned();
         failed_failed_entry.verification_status = "legacy".to_owned();
+        failed_failed_entry.outcome_status = "legacy".to_owned();
         let failed_failed = serde_json::to_string(&failed_failed_entry).unwrap();
 
         let input = format!(
@@ -880,6 +883,7 @@ mod tests {
         failed_entry.stage = "failed".to_owned();
         failed_entry.status = "failed".to_owned();
         failed_entry.verification_status = "legacy".to_owned();
+        failed_entry.outcome_status = "legacy".to_owned();
         let failed = serde_json::to_string(&failed_entry).unwrap();
 
         let input = format!("{unknown}\n{legacy}\n{completed}\n{failed}\n");
@@ -1944,6 +1948,14 @@ mod tests {
         failed_entry.outcome_message = "action outcome rejected because execution and verification evidence did not establish a verified result.".to_owned();
 
         assert!(is_valid_audit_entry(&failed_entry));
+    }
+
+    #[test]
+    fn shared_audit_validation_rejects_legacy_verification_with_verified_outcome() {
+        let mut entry = test_audit_entry("legacy-verification-verified-outcome");
+        entry.verification_status = "legacy".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
     }
 
     #[test]
