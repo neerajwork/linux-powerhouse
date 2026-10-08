@@ -2115,6 +2115,14 @@ mod tests {
     }
 
     #[test]
+    fn shared_audit_validation_rejects_invalid_audit_lifecycle() {
+        let mut entry = test_audit_entry("invalid-audit-lifecycle");
+        entry.status = "failed".to_owned();
+
+        assert!(!is_valid_audit_entry(&entry));
+    }
+
+    #[test]
     fn shared_audit_validation_accepts_canonical_outcome_messages() {
         assert!(is_valid_audit_entry(&test_audit_entry("verified")));
 
