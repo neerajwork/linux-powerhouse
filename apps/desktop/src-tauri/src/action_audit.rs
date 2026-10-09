@@ -1324,6 +1324,17 @@ mod tests {
     }
 
     #[test]
+    fn null_legacy_timestamp_does_not_hide_valid_history() {
+        let input = r#"{"id":"null-timestamp","timestamp":null,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
     fn null_legacy_audit_fields_do_not_hide_valid_history() {
         let input = r#"{"id":"null-verification-status","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":null}"#;
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
