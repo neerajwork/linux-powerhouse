@@ -1390,6 +1390,72 @@ mod tests {
     }
 
     #[test]
+    fn null_legacy_confirmed_does_not_hide_valid_history() {
+        let input = r#"{"id":"null-confirmed","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":null,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn null_legacy_reversible_does_not_hide_valid_history() {
+        let input = r#"{"id":"null-reversible","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":null,"privilege":"none","verification_status":"legacy"}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn null_legacy_action_does_not_hide_valid_history() {
+        let input = r#"{"id":"null-action","timestamp":123,"action":null,"stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn null_legacy_stage_does_not_hide_valid_history() {
+        let input = r#"{"id":"null-stage","timestamp":123,"action":"test_action","stage":null,"confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn null_legacy_status_does_not_hide_valid_history() {
+        let input = r#"{"id":"null-status","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":null,"message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn null_legacy_privilege_does_not_hide_valid_history() {
+        let input = r#"{"id":"null-privilege","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":null,"verification_status":"legacy"}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
     fn legacy_audit_records_bypass_new_lifecycle_validation() {
         let input = r#"{"id":"legacy-invalid-lifecycle","timestamp":123,"action":"unknown_action","stage":"unknown_stage","confirmed":false,"status":"failed","message":"legacy message","reversible":true,"privilege":"none","verification_status":"legacy","verification_message":"","outcome_status":"legacy","outcome_message":"","outcome_action":"different_action"}"#;
 
