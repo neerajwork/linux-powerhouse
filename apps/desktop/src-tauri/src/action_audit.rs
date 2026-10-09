@@ -758,6 +758,24 @@ mod tests {
     }
 
     #[test]
+    fn legacy_audit_entries_preserve_historical_stage_values() {
+        let mut legacy_entry = test_audit_entry("legacy-historical-stage");
+        legacy_entry.stage = "historical_stage".to_owned();
+        legacy_entry.status = "failed".to_owned();
+        legacy_entry.verification_status = "legacy".to_owned();
+        legacy_entry.outcome_status = "legacy".to_owned();
+        let legacy = serde_json::to_string(&legacy_entry).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{legacy}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "legacy-historical-stage");
+        assert_eq!(entries[0].stage, "historical_stage");
+        assert_eq!(entries[0].verification_status, "legacy");
+        assert_eq!(entries[0].outcome_status, "legacy");
+    }
+
+    #[test]
     fn unknown_audit_stages_are_ignored_without_hiding_valid_history() {
         let mut unknown_entry = test_audit_entry("unknown-stage");
         unknown_entry.stage = "unknown".to_owned();
