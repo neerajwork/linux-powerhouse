@@ -685,6 +685,24 @@ mod tests {
     }
 
     #[test]
+    fn maximum_legacy_timestamp_preserves_valid_history() {
+        let mut entry = test_audit_entry("maximum-legacy-timestamp");
+        entry.timestamp = u64::MAX;
+        entry.verification_status = "legacy".to_owned();
+        entry.verification_message = "".to_owned();
+        entry.outcome_status = "legacy".to_owned();
+        entry.outcome_message = "".to_owned();
+        entry.outcome_action = "".to_owned();
+
+        let input = serde_json::to_string(&entry).unwrap();
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "maximum-legacy-timestamp");
+        assert_eq!(entries[0].timestamp, u64::MAX);
+    }
+
+    #[test]
     fn blank_audit_actions_are_ignored_without_hiding_valid_history() {
         let mut empty_entry = test_audit_entry("empty-action");
         empty_entry.action = "".to_owned();
