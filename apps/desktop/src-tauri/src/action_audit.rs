@@ -1976,6 +1976,38 @@ mod tests {
     }
 
     #[test]
+    fn legacy_audit_entries_round_trip_through_persistence_format() {
+        let legacy_line = r#"{"id":"legacy-round-trip","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none"}"#;
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-legacy-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, format!("{legacy_line}\n")).unwrap();
+
+        let contents = std::fs::File::open(&file).unwrap();
+        let history = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].id, "legacy-round-trip");
+        assert_eq!(history[0].verification_status, "legacy");
+        assert_eq!(history[0].verification_message, "");
+        assert_eq!(history[0].outcome_status, "legacy");
+        assert_eq!(history[0].outcome_message, "");
+        assert_eq!(history[0].outcome_action, "");
+
+        let persisted_line = serde_json::to_string(&history[0]).unwrap();
+        std::fs::write(&file, format!("{persisted_line}\n")).unwrap();
+
+        let contents = std::fs::File::open(&file).unwrap();
+        let reloaded = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(reloaded, history);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn recorded_audit_entries_round_trip_through_persistence_format() {
         let entry = test_audit_entry("round-trip");
         let line = serde_json::to_string(&entry).unwrap();
