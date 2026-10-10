@@ -2290,6 +2290,33 @@ mod tests {
     }
 
     #[test]
+    fn history_reads_legacy_audit_entries_through_history_boundary() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-legacy-history-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+        let legacy_line = r#"{"id":"legacy-history","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"legacy message","reversible":true,"privilege":"none"}"#;
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, format!("{legacy_line}\n")).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].id, "legacy-history");
+        assert_eq!(history[0].timestamp, 123);
+        assert_eq!(history[0].message, "legacy message");
+        assert_eq!(history[0].verification_status, "legacy");
+        assert_eq!(history[0].verification_message, "");
+        assert_eq!(history[0].outcome_status, "legacy");
+        assert_eq!(history[0].outcome_message, "");
+        assert_eq!(history[0].outcome_action, "");
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_reads_successful_audit_entries_through_history_boundary() {
         let root =
             std::env::temp_dir().join(format!("linux-powerhouse-audit-history-{}", Uuid::new_v4()));
