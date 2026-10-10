@@ -1500,6 +1500,61 @@ mod tests {
     }
 
     #[test]
+    fn array_legacy_verification_status_does_not_hide_valid_history() {
+        let input = r#"{"id":"array-verification-status","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":[]}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn array_legacy_verification_message_does_not_hide_valid_history() {
+        let input = r#"{"id":"array-verification-message","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy","verification_message":[]}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn array_legacy_outcome_status_does_not_hide_valid_history() {
+        let input = r#"{"id":"array-outcome-status","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy","outcome_status":[]}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn array_legacy_outcome_message_does_not_hide_valid_history() {
+        let input = r#"{"id":"array-outcome-message","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy","outcome_status":"legacy","outcome_message":[]}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
+    fn array_legacy_outcome_action_does_not_hide_valid_history() {
+        let input = r#"{"id":"array-outcome-action","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy","outcome_status":"legacy","outcome_action":[]}"#;
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(format!("{input}\n{valid}\n"))).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
     fn null_legacy_confirmed_does_not_hide_valid_history() {
         let input = r#"{"id":"null-confirmed","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":null,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
         let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
