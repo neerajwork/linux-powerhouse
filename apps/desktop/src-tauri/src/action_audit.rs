@@ -1976,6 +1976,42 @@ mod tests {
     }
 
     #[test]
+    fn mixed_legacy_and_current_audit_entries_round_trip_through_persistence_format() {
+        let legacy_line = r#"{"id":"legacy-mixed","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"legacy message","reversible":true,"privilege":"none"}"#;
+        let current = test_audit_entry("current-mixed");
+        let current_line = serde_json::to_string(&current).unwrap();
+        let root =
+            std::env::temp_dir().join(format!("linux-powerhouse-audit-mixed-{}", Uuid::new_v4()));
+        let file = root.join("action-audit.jsonl");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, format!("{legacy_line}\n{current_line}\n")).unwrap();
+
+        let contents = std::fs::File::open(&file).unwrap();
+        let history = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].id, "legacy-mixed");
+        assert_eq!(history[0].verification_status, "legacy");
+        assert_eq!(history[0].outcome_status, "legacy");
+        assert_eq!(history[1], current);
+
+        let persisted = history
+            .iter()
+            .map(|entry| serde_json::to_string(entry).unwrap())
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(&file, format!("{persisted}\n")).unwrap();
+
+        let contents = std::fs::File::open(&file).unwrap();
+        let reloaded = parse_audit_entries(std::io::BufReader::new(contents)).unwrap();
+
+        assert_eq!(reloaded, history);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn legacy_audit_entries_round_trip_through_persistence_format() {
         let legacy_line = r#"{"id":"legacy-round-trip","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none"}"#;
         let root =
