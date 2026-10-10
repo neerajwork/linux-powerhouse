@@ -1863,6 +1863,30 @@ mod tests {
     }
 
     #[test]
+    fn legacy_blank_core_message_is_rejected_without_hiding_valid_history() {
+        let mut legacy_entry = test_audit_entry("legacy-blank-message");
+        legacy_entry.action = "unknown_action".to_owned();
+        legacy_entry.stage = "unknown_stage".to_owned();
+        legacy_entry.confirmed = false;
+        legacy_entry.status = "failed".to_owned();
+        legacy_entry.verification_status = "legacy".to_owned();
+        legacy_entry.verification_message = "".to_owned();
+        legacy_entry.outcome_status = "legacy".to_owned();
+        legacy_entry.outcome_message = "".to_owned();
+        legacy_entry.outcome_action = "different_action".to_owned();
+        legacy_entry.message = "   ".to_owned();
+
+        let legacy = serde_json::to_string(&legacy_entry).unwrap();
+        let valid = serde_json::to_string(&test_audit_entry("valid")).unwrap();
+        let input = format!("{legacy}\n{valid}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "valid");
+    }
+
+    #[test]
     fn audit_ids_are_unique_and_use_the_action_prefix() {
         let first = audit_id();
         let second = audit_id();
