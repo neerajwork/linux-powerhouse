@@ -771,6 +771,23 @@ mod tests {
     }
 
     #[test]
+    fn invalid_record_does_not_reserve_id_before_valid_duplicate() {
+        let mut invalid_entry = test_audit_entry("shared-id");
+        invalid_entry.timestamp = 0;
+        let valid_entry = test_audit_entry("shared-id");
+        let other_entry = test_audit_entry("other-id");
+
+        let invalid_line = serde_json::to_string(&invalid_entry).unwrap();
+        let valid_line = serde_json::to_string(&valid_entry).unwrap();
+        let other_line = serde_json::to_string(&other_entry).unwrap();
+        let input = format!("{invalid_line}\n{valid_line}\n{other_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![valid_entry, other_entry]);
+    }
+
+    #[test]
     fn duplicate_audit_ids_keep_first_record_without_hiding_unique_history() {
         let first_entry = test_audit_entry("first");
         let mut duplicate_entry = test_audit_entry("first");
