@@ -2466,6 +2466,28 @@ mod tests {
     }
 
     #[test]
+    fn history_returns_one_record_when_audit_file_contains_only_duplicates() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-duplicate-only-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let entry = test_audit_entry("duplicate-only");
+        let line = serde_json::to_string(&entry).unwrap();
+        let input = format!("{line}\n{line}\n{line}\n");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![entry]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_propagates_non_not_found_file_errors() {
         let root =
             std::env::temp_dir().join(format!("linux-powerhouse-audit-error-{}", Uuid::new_v4()));
