@@ -2428,6 +2428,25 @@ mod tests {
     }
 
     #[test]
+    fn history_returns_empty_when_audit_file_contains_only_whitespace() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-whitespace-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, b"\n   \n\t\n").unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert!(history.is_empty());
+        assert!(file.exists());
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_propagates_non_not_found_file_errors() {
         let root =
             std::env::temp_dir().join(format!("linux-powerhouse-audit-error-{}", Uuid::new_v4()));
