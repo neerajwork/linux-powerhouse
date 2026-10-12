@@ -788,6 +788,23 @@ mod tests {
     }
 
     #[test]
+    fn invalid_duplicate_does_not_hide_later_unique_record() {
+        let first_entry = test_audit_entry("shared-id");
+        let mut invalid_duplicate = test_audit_entry("shared-id");
+        invalid_duplicate.timestamp = 0;
+        let later_entry = test_audit_entry("later-unique");
+
+        let first_line = serde_json::to_string(&first_entry).unwrap();
+        let invalid_line = serde_json::to_string(&invalid_duplicate).unwrap();
+        let later_line = serde_json::to_string(&later_entry).unwrap();
+        let input = format!("{first_line}\n{invalid_line}\n{later_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![first_entry, later_entry]);
+    }
+
+    #[test]
     fn duplicate_audit_ids_keep_first_record_without_hiding_unique_history() {
         let first_entry = test_audit_entry("first");
         let mut duplicate_entry = test_audit_entry("first");
