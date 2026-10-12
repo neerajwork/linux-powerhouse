@@ -2779,6 +2779,36 @@ mod tests {
     }
 
     #[test]
+    fn history_preserves_first_duplicate_across_malformed_records() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-duplicate-recovery-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let first = test_audit_entry("shared-id");
+        let mut duplicate = test_audit_entry("shared-id");
+        duplicate.message = "later duplicate".to_owned();
+        let unique = test_audit_entry("unique-id");
+
+        let first_line = serde_json::to_string(&first).unwrap();
+        let duplicate_line = serde_json::to_string(&duplicate).unwrap();
+        let unique_line = serde_json::to_string(&unique).unwrap();
+
+        let input =
+            format!("{first_line}\nnot valid json\n{{}}\n{duplicate_line}\n{unique_line}\n");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, unique]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_preserves_valid_records_before_invalid_suffix() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-invalid-suffix-{}",
