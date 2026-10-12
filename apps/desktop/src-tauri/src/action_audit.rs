@@ -588,6 +588,19 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_json_keys_do_not_hide_valid_history() {
+        let duplicate_id = r#"{"id":"first-id","id":"last-id","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
+        let duplicate_status = r#"{"id":"duplicate-status","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"failed","status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
+        let valid = test_audit_entry("valid-after-duplicate-keys");
+        let valid_line = serde_json::to_string(&valid).unwrap();
+        let input = format!("{duplicate_id}\n{duplicate_status}\n{valid_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![valid]);
+    }
+
+    #[test]
     fn non_object_json_values_do_not_hide_valid_history() {
         let valid = test_audit_entry("valid-after-non-object-values");
         let valid_line = serde_json::to_string(&valid).unwrap();
