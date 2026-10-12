@@ -821,6 +821,25 @@ mod tests {
     }
 
     #[test]
+    fn invalid_record_before_duplicates_keeps_first_valid_occurrence() {
+        let mut invalid_entry = test_audit_entry("shared-id");
+        invalid_entry.timestamp = 0;
+
+        let first_valid = test_audit_entry("shared-id");
+        let mut second_valid = test_audit_entry("shared-id");
+        second_valid.message = "second valid occurrence".to_owned();
+
+        let invalid_line = serde_json::to_string(&invalid_entry).unwrap();
+        let first_line = serde_json::to_string(&first_valid).unwrap();
+        let second_line = serde_json::to_string(&second_valid).unwrap();
+        let input = format!("{invalid_line}\n{first_line}\n{second_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![first_valid]);
+    }
+
+    #[test]
     fn duplicate_audit_ids_keep_first_record_without_hiding_unique_history() {
         let first_entry = test_audit_entry("first");
         let mut duplicate_entry = test_audit_entry("first");
