@@ -2560,6 +2560,55 @@ mod tests {
     }
 
     #[test]
+    fn history_preserves_valid_records_before_invalid_suffix() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-invalid-suffix-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let first = test_audit_entry("before-invalid-suffix-first");
+        let second = test_audit_entry("before-invalid-suffix-second");
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+        let input = format!("{first_line}\n{second_line}\nnot valid json\n{{}}\nnull\n");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, second]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn history_preserves_mixed_legacy_and_current_entries() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-legacy-current-history-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+        let legacy_line = r#"{"id":"legacy-history-mixed","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"legacy message","reversible":true,"privilege":"none"}"#;
+        let current = test_audit_entry("current-history-mixed");
+        let current_line = serde_json::to_string(&current).unwrap();
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, format!("{legacy_line}\n{current_line}\n")).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].id, "legacy-history-mixed");
+        assert_eq!(history[0].verification_status, "legacy");
+        assert_eq!(history[0].outcome_status, "legacy");
+        assert_eq!(history[1], current);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_rejects_invalid_outcome_evidence_before_audit_validation() {
         let audit = ActionAudit;
         let mut outcome = test_verified_outcome();
