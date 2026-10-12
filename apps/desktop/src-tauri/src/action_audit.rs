@@ -754,6 +754,48 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_reader_errors_after_valid_records() {
+        struct FailingAfterLine {
+            data: Cursor<Vec<u8>>,
+        }
+
+        impl std::io::Read for FailingAfterLine {
+            fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+                if self.data.position() >= self.data.get_ref().len() as u64 {
+                    return Err(std::io::Error::other(
+                        "simulated audit reader failure after valid line",
+                    ));
+                }
+                self.data.read(buffer)
+            }
+        }
+
+        impl std::io::BufRead for FailingAfterLine {
+            fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+                if self.data.position() >= self.data.get_ref().len() as u64 {
+                    return Err(std::io::Error::other(
+                        "simulated audit reader failure after valid line",
+                    ));
+                }
+                self.data.fill_buf()
+            }
+
+            fn consume(&mut self, amount: usize) {
+                self.data.consume(amount);
+            }
+        }
+
+        let valid_line = serde_json::to_string(&test_audit_entry("valid-before-error")).unwrap();
+        let reader = FailingAfterLine {
+            data: Cursor::new(format!("{valid_line}\n").into_bytes()),
+        };
+
+        let error = parse_audit_entries(reader).unwrap_err();
+
+        assert_eq!(error, "simulated audit reader failure after valid line");
+    }
+
+    #[test]
     fn history_propagates_audit_file_read_errors() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-history-read-error-{}",
