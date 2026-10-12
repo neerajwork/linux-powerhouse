@@ -796,6 +796,50 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_reader_errors_during_partial_record() {
+        struct FailingDuringLine {
+            data: Cursor<Vec<u8>>,
+        }
+
+        impl std::io::Read for FailingDuringLine {
+            fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+                if self.data.position() >= self.data.get_ref().len() as u64 {
+                    return Err(std::io::Error::other(
+                        "simulated audit reader failure during partial record",
+                    ));
+                }
+                self.data.read(buffer)
+            }
+        }
+
+        impl std::io::BufRead for FailingDuringLine {
+            fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+                if self.data.position() >= self.data.get_ref().len() as u64 {
+                    return Err(std::io::Error::other(
+                        "simulated audit reader failure during partial record",
+                    ));
+                }
+                self.data.fill_buf()
+            }
+
+            fn consume(&mut self, amount: usize) {
+                self.data.consume(amount);
+            }
+        }
+
+        let reader = FailingDuringLine {
+            data: Cursor::new(b"{\"id\":\"partial".to_vec()),
+        };
+
+        let error = parse_audit_entries(reader).unwrap_err();
+
+        assert_eq!(
+            error,
+            "simulated audit reader failure during partial record"
+        );
+    }
+
+    #[test]
     fn history_propagates_audit_file_read_errors() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-history-read-error-{}",
