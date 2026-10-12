@@ -588,6 +588,125 @@ mod tests {
     }
 
     #[test]
+    fn non_object_json_values_do_not_hide_valid_history() {
+        let valid = test_audit_entry("valid-after-non-object-values");
+        let valid_line = serde_json::to_string(&valid).unwrap();
+        let input = format!("[]\n\"text\"\n123\ntrue\n{valid_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![valid]);
+    }
+
+    #[test]
+    fn incompatible_core_field_types_do_not_hide_valid_history() {
+        let base = serde_json::to_value(test_audit_entry("invalid-core-field-type")).unwrap();
+        let valid = test_audit_entry("valid-after-core-type-matrix");
+        let valid_line = serde_json::to_string(&valid).unwrap();
+
+        let cases: Vec<(&str, Vec<serde_json::Value>)> = vec![
+            (
+                "id",
+                vec![
+                    serde_json::json!(123),
+                    serde_json::json!(true),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "timestamp",
+                vec![
+                    serde_json::json!("123"),
+                    serde_json::json!(true),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "action",
+                vec![
+                    serde_json::json!(123),
+                    serde_json::json!(true),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "stage",
+                vec![
+                    serde_json::json!(123),
+                    serde_json::json!(true),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "confirmed",
+                vec![
+                    serde_json::json!("true"),
+                    serde_json::json!(123),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "status",
+                vec![
+                    serde_json::json!(123),
+                    serde_json::json!(true),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "message",
+                vec![
+                    serde_json::json!(123),
+                    serde_json::json!(true),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "reversible",
+                vec![
+                    serde_json::json!("true"),
+                    serde_json::json!(123),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+            (
+                "privilege",
+                vec![
+                    serde_json::json!(123),
+                    serde_json::json!(true),
+                    serde_json::json!([]),
+                    serde_json::json!({}),
+                ],
+            ),
+        ];
+
+        let mut lines = Vec::new();
+
+        for (field, invalid_values) in cases {
+            for invalid_value in invalid_values {
+                let mut invalid = base.clone();
+                invalid[field] = invalid_value;
+                lines.push(serde_json::to_string(&invalid).unwrap());
+            }
+        }
+
+        lines.push(valid_line);
+        let input = lines.join("\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![valid]);
+    }
+
+    #[test]
     fn empty_audit_lines_are_ignored() {
         let entry = serde_json::to_string(&test_audit_entry("first")).unwrap();
         let input = format!("\n{entry}\n\n");
