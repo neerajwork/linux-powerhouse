@@ -805,6 +805,22 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_record_preserves_order_of_unique_history() {
+        let first_entry = test_audit_entry("first");
+        let duplicate_entry = first_entry.clone();
+        let last_entry = test_audit_entry("last");
+
+        let first_line = serde_json::to_string(&first_entry).unwrap();
+        let duplicate_line = serde_json::to_string(&duplicate_entry).unwrap();
+        let last_line = serde_json::to_string(&last_entry).unwrap();
+        let input = format!("{first_line}\n{duplicate_line}\n{last_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![first_entry, last_entry]);
+    }
+
+    #[test]
     fn duplicate_audit_ids_keep_first_record_without_hiding_unique_history() {
         let first_entry = test_audit_entry("first");
         let mut duplicate_entry = test_audit_entry("first");
