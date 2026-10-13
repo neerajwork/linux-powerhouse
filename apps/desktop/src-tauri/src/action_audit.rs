@@ -823,6 +823,18 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_invalid_utf8_after_multiple_records_and_whitespace() {
+        let first_line = serde_json::to_string(&test_audit_entry("first-valid")).unwrap();
+        let second_line = serde_json::to_string(&test_audit_entry("second-valid")).unwrap();
+        let mut input = format!("{first_line}\n \t\n{second_line}\n \n").into_bytes();
+        input.extend_from_slice(&[0xff, 0xfe]);
+
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
     fn audit_history_propagates_invalid_utf8_during_partial_record() {
         let mut input = br#"{"id":"partial"#.to_vec();
         input.extend_from_slice(&[0xff, 0xfe]);
