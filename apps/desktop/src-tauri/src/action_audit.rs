@@ -3106,6 +3106,30 @@ mod tests {
     }
 
     #[test]
+    fn history_preserves_valid_records_around_truncated_record() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-truncated-middle-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let first = test_audit_entry("before-truncated-middle");
+        let second = test_audit_entry("after-truncated-middle");
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+        let input = format!("{first_line}\n{{\"id\":\"truncated\n{second_line}\n");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, second]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_preserves_mixed_legacy_and_current_entries() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-legacy-current-history-{}",
