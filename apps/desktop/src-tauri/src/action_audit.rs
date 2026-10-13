@@ -3058,6 +3058,34 @@ mod tests {
     }
 
     #[test]
+    fn history_preserves_first_duplicate_when_invalid_duplicate_intervenes() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-invalid-duplicate-recovery-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let first = test_audit_entry("shared-id");
+        let mut invalid_duplicate = test_audit_entry("shared-id");
+        invalid_duplicate.timestamp = 0;
+        let unique = test_audit_entry("unique-after-invalid-duplicate");
+
+        let first_line = serde_json::to_string(&first).unwrap();
+        let invalid_line = serde_json::to_string(&invalid_duplicate).unwrap();
+        let unique_line = serde_json::to_string(&unique).unwrap();
+        let input = format!("{first_line}\n{invalid_line}\n{unique_line}\n");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, unique]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_preserves_first_duplicate_across_truncated_records() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-truncated-duplicate-{}",
