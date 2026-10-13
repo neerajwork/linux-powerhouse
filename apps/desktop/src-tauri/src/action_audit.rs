@@ -769,6 +769,18 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_invalid_utf8_after_valid_records() {
+        let valid_line =
+            serde_json::to_string(&test_audit_entry("valid-before-invalid-utf8")).unwrap();
+        let mut input = format!("{valid_line}\n").into_bytes();
+        input.extend_from_slice(&[0xff, 0xfe]);
+
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
     fn audit_history_propagates_reader_errors_after_valid_records() {
         struct FailingAfterLine {
             data: Cursor<Vec<u8>>,
