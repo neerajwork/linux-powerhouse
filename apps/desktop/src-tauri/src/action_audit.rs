@@ -847,6 +847,42 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_invalid_utf8_between_valid_records() {
+        let first_line = serde_json::to_string(&test_audit_entry("first-valid")).unwrap();
+        let second_line = serde_json::to_string(&test_audit_entry("second-valid")).unwrap();
+        let mut input = format!("{first_line}\n").into_bytes();
+        input.extend_from_slice(&[0xff, 0xfe]);
+        input.extend_from_slice(format!("\n{second_line}\n").as_bytes());
+
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
+    fn audit_history_propagates_invalid_utf8_inside_record() {
+        let mut input = br#"{"id":"embedded"#.to_vec();
+        input.push(0xff);
+        input.extend_from_slice(br#"","valid":true}"#);
+
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
+    fn audit_history_propagates_truncated_multibyte_utf8_at_end() {
+        let valid_line =
+            serde_json::to_string(&test_audit_entry("valid-before-truncation")).unwrap();
+        let mut input = format!("{valid_line}\n").into_bytes();
+        input.extend_from_slice(&[0xe2, 0x82]);
+
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
     fn audit_history_propagates_invalid_utf8_during_partial_record() {
         let mut input = br#"{"id":"partial"#.to_vec();
         input.extend_from_slice(&[0xff, 0xfe]);
