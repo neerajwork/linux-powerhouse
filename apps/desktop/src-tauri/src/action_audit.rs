@@ -3077,6 +3077,31 @@ mod tests {
     }
 
     #[test]
+    fn history_preserves_valid_records_around_invalid_audit_object() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-invalid-object-middle-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let first = test_audit_entry("before-invalid-object");
+        let second = test_audit_entry("after-invalid-object");
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+        let input =
+            format!("{first_line}\n{{\"id\":\"invalid\",\"timestamp\":0}}\n{second_line}\n");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, second]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_preserves_first_duplicate_across_malformed_records() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-duplicate-recovery-{}",
