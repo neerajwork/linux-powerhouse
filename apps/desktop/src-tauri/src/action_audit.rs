@@ -720,6 +720,13 @@ mod tests {
     }
 
     #[test]
+    fn empty_audit_input_returns_empty_history() {
+        let entries = parse_audit_entries(Cursor::new(Vec::<u8>::new())).unwrap();
+
+        assert!(entries.is_empty());
+    }
+
+    #[test]
     fn empty_audit_lines_are_ignored() {
         let entry = serde_json::to_string(&test_audit_entry("first")).unwrap();
         let input = format!("\n{entry}\n\n");
