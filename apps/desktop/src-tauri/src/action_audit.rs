@@ -2958,6 +2958,31 @@ mod tests {
     }
 
     #[test]
+    fn history_preserves_valid_records_before_invalid_audit_object_suffix() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-invalid-object-suffix-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        let first = test_audit_entry("before-invalid-object-suffix-first");
+        let second = test_audit_entry("before-invalid-object-suffix-second");
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+        let input =
+            format!("{first_line}\n{second_line}\n{{}}\n{{\"id\":\"invalid\",\"timestamp\":0}}\n");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, input).unwrap();
+
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![first, second]);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn history_returns_one_record_when_audit_file_contains_only_duplicates() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-duplicate-only-{}",
