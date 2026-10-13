@@ -738,6 +738,14 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_invalid_utf8_errors() {
+        let input = vec![0xff, 0xfe];
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
     fn audit_history_propagates_reader_errors() {
         struct FailingReader;
 
