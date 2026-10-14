@@ -846,6 +846,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_invalid_utf8_after_unterminated_whitespace_prefix() {
+        let mut input = b" \t  ".to_vec();
+        input.extend_from_slice(&[0xff, 0xfe]);
+
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
     fn audit_history_propagates_invalid_utf8_after_whitespace_prefix_and_valid_record() {
         let valid_line =
             serde_json::to_string(&test_audit_entry("valid-after-whitespace")).unwrap();
