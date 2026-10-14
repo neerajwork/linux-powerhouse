@@ -929,6 +929,18 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_invalid_utf8_after_unterminated_whitespace_suffix() {
+        let valid_line =
+            serde_json::to_string(&test_audit_entry("valid-before-whitespace-suffix")).unwrap();
+        let mut input = format!("{valid_line}\n \t  ").into_bytes();
+        input.extend_from_slice(&[0xff, 0xfe]);
+
+        let error = parse_audit_entries(Cursor::new(input)).unwrap_err();
+
+        assert!(error.contains("stream did not contain valid UTF-8"));
+    }
+
+    #[test]
     fn audit_history_propagates_invalid_utf8_between_valid_records() {
         let first_line = serde_json::to_string(&test_audit_entry("first-valid")).unwrap();
         let second_line = serde_json::to_string(&test_audit_entry("second-valid")).unwrap();
