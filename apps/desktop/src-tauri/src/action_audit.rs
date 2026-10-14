@@ -1039,6 +1039,47 @@ mod tests {
     }
 
     #[test]
+    fn audit_history_propagates_reader_errors_after_malformed_records() {
+        struct FailingAfterLine {
+            data: Cursor<Vec<u8>>,
+        }
+
+        impl std::io::Read for FailingAfterLine {
+            fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+                if self.data.position() >= self.data.get_ref().len() as u64 {
+                    return Err(std::io::Error::other(
+                        "simulated audit reader failure after malformed line",
+                    ));
+                }
+                self.data.read(buffer)
+            }
+        }
+
+        impl std::io::BufRead for FailingAfterLine {
+            fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+                if self.data.position() >= self.data.get_ref().len() as u64 {
+                    return Err(std::io::Error::other(
+                        "simulated audit reader failure after malformed line",
+                    ));
+                }
+                self.data.fill_buf()
+            }
+
+            fn consume(&mut self, amount: usize) {
+                self.data.consume(amount);
+            }
+        }
+
+        let reader = FailingAfterLine {
+            data: Cursor::new(b"not valid json\n".to_vec()),
+        };
+
+        let error = parse_audit_entries(reader).unwrap_err();
+
+        assert_eq!(error, "simulated audit reader failure after malformed line");
+    }
+
+    #[test]
     fn audit_history_propagates_reader_errors_during_partial_record() {
         struct FailingDuringLine {
             data: Cursor<Vec<u8>>,
