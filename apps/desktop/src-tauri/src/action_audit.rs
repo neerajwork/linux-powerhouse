@@ -647,6 +647,19 @@ mod tests {
     }
 
     #[test]
+    fn bom_prefixed_record_does_not_hide_valid_history() {
+        let first = test_audit_entry("bom-prefixed-record");
+        let second = test_audit_entry("valid-after-bom");
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+        let input = format!("\u{feff}{first_line}\n{second_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![second]);
+    }
+
+    #[test]
     fn incompatible_core_field_types_do_not_hide_valid_history() {
         let base = serde_json::to_value(test_audit_entry("invalid-core-field-type")).unwrap();
         let valid = test_audit_entry("valid-after-core-type-matrix");
