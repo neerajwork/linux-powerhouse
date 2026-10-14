@@ -798,6 +798,17 @@ mod tests {
     }
 
     #[test]
+    fn valid_history_survives_unterminated_whitespace_suffix() {
+        let entry = test_audit_entry("valid-before-whitespace-suffix");
+        let line = serde_json::to_string(&entry).unwrap();
+        let input = format!("{line}\n \t  ");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![entry]);
+    }
+
+    #[test]
     fn empty_audit_lines_are_ignored() {
         let entry = serde_json::to_string(&test_audit_entry("first")).unwrap();
         let input = format!("\n{entry}\n\n");
