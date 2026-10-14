@@ -751,6 +751,16 @@ mod tests {
     }
 
     #[test]
+    fn final_audit_record_without_newline_is_preserved() {
+        let entry = test_audit_entry("final-record-without-newline");
+        let input = serde_json::to_string(&entry).unwrap();
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![entry]);
+    }
+
+    #[test]
     fn empty_audit_lines_are_ignored() {
         let entry = serde_json::to_string(&test_audit_entry("first")).unwrap();
         let input = format!("\n{entry}\n\n");
