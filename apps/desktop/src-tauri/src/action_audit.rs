@@ -2789,6 +2789,44 @@ mod tests {
     }
 
     #[test]
+    fn record_appends_current_entry_without_losing_existing_legacy_history() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-legacy-append-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+        let legacy_line = r#"{"id":"legacy-before-append","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"legacy message","reversible":true,"privilege":"none"}"#;
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, format!("{legacy_line}\n")).unwrap();
+
+        let outcome = test_verified_outcome();
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let appended = record_audit_entry(&record, &file).unwrap();
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].id, "legacy-before-append");
+        assert_eq!(history[0].verification_status, "legacy");
+        assert_eq!(history[0].outcome_status, "legacy");
+        assert_eq!(history[1], appended);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_propagates_audit_path_filesystem_errors() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-record-error-{}",
