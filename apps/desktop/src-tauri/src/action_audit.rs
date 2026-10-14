@@ -762,6 +762,19 @@ mod tests {
     }
 
     #[test]
+    fn windows_line_endings_preserve_valid_audit_history() {
+        let first = test_audit_entry("first-crlf-record");
+        let second = test_audit_entry("second-crlf-record");
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+        let input = format!("{first_line}\r\n{second_line}\r\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![first, second]);
+    }
+
+    #[test]
     fn final_audit_record_without_newline_is_preserved() {
         let entry = test_audit_entry("final-record-without-newline");
         let input = serde_json::to_string(&entry).unwrap();
