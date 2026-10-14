@@ -612,16 +612,27 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_json_keys_do_not_hide_valid_history() {
-        let duplicate_id = r#"{"id":"first-id","id":"last-id","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
-        let duplicate_status = r#"{"id":"duplicate-status","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"failed","status":"success","message":"test message","reversible":true,"privilege":"none","verification_status":"legacy"}"#;
-        let valid = test_audit_entry("valid-after-duplicate-keys");
+    fn malformed_json_records_do_not_hide_valid_history() {
+        let valid = test_audit_entry("valid-after-malformed-json");
         let valid_line = serde_json::to_string(&valid).unwrap();
-        let input = format!("{duplicate_id}\n{duplicate_status}\n{valid_line}\n");
+        let input = format!("{{\"id\":\"malformed\",\n{valid_line}\n");
 
         let entries = parse_audit_entries(Cursor::new(input)).unwrap();
 
         assert_eq!(entries, vec![valid]);
+    }
+
+    #[test]
+    fn whitespace_padded_audit_ids_are_distinct() {
+        let first = test_audit_entry("shared-id");
+        let second = test_audit_entry(" shared-id ");
+        let first_line = serde_json::to_string(&first).unwrap();
+        let second_line = serde_json::to_string(&second).unwrap();
+        let input = format!("{first_line}\n{second_line}\n");
+
+        let entries = parse_audit_entries(Cursor::new(input)).unwrap();
+
+        assert_eq!(entries, vec![first, second]);
     }
 
     #[test]
