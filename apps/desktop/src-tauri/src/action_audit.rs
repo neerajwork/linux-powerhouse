@@ -2887,6 +2887,44 @@ mod tests {
     }
 
     #[test]
+    fn record_appends_to_existing_empty_file() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-empty-file-append-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, b"").unwrap();
+
+        let outcome = test_verified_outcome();
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let appended = record_audit_entry(&record, &file).unwrap();
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history, vec![appended]);
+
+        let contents = std::fs::read(&file).unwrap();
+        assert!(contents.starts_with(b"{"));
+        assert!(contents.ends_with(b"\n"));
+        assert_eq!(contents.iter().filter(|&&byte| byte == b'\n').count(), 1);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_appends_after_newline_only_file() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-newline-only-append-{}",
