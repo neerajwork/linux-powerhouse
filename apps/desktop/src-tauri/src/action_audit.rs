@@ -337,7 +337,7 @@ fn audit_path_from_environment(
     state_home: Option<&str>,
     home: Option<&str>,
 ) -> Result<PathBuf, String> {
-    if let Some(state_home) = state_home {
+    if let Some(state_home) = state_home.filter(|path| !path.is_empty()) {
         return Ok(PathBuf::from(state_home)
             .join("linux-powerhouse")
             .join("action-audit.jsonl"));
@@ -381,6 +381,20 @@ mod tests {
     #[test]
     fn audit_path_falls_back_to_home() {
         let path = audit_path_from_environment(None, Some("/tmp/home")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/home")
+                .join(".local")
+                .join("state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
+    fn audit_path_falls_back_to_home_when_xdg_state_home_is_empty() {
+        let path = audit_path_from_environment(Some(""), Some("/tmp/home")).unwrap();
 
         assert_eq!(
             path,
