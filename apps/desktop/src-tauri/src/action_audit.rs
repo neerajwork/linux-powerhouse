@@ -3697,6 +3697,35 @@ mod tests {
     }
 
     #[test]
+    fn invalid_outcome_evidence_does_not_create_audit_path() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-invalid-outcome-no-side-effects-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("nested").join("action-audit.jsonl");
+
+        let mut outcome = test_verified_outcome();
+        outcome.execution.executed = false;
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let error = record_audit_entry(&record, &file).unwrap_err();
+
+        assert_eq!(error, "invalid action audit outcome evidence");
+        assert!(!root.exists());
+    }
+
+    #[test]
     fn record_rejects_invalid_outcome_evidence_before_audit_validation() {
         let audit = ActionAudit;
         let mut outcome = test_verified_outcome();
