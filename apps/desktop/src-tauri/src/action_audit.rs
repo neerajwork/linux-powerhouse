@@ -3847,6 +3847,33 @@ mod tests {
     }
 
     #[test]
+    fn invalid_audit_entry_does_not_create_audit_path() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-invalid-entry-no-side-effects-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("nested").join("action-audit.jsonl");
+        let outcome = test_rejected_outcome();
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "failed",
+            verification_message: "verification failed",
+            outcome: &outcome,
+        };
+
+        let error = record_audit_entry(&record, &file).unwrap_err();
+
+        assert_eq!(error, "invalid action audit entry");
+        assert!(!root.exists());
+    }
+
+    #[test]
     fn record_rejects_entries_that_fail_audit_validation() {
         let audit = ActionAudit;
         let outcome = test_rejected_outcome();
