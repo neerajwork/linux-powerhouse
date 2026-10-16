@@ -2999,6 +2999,47 @@ mod tests {
     }
 
     #[test]
+    fn record_appends_after_carriage_return_terminated_legacy_record() {
+        let root = std::env::temp_dir().join(format!(
+            "linux-powerhouse-audit-carriage-return-append-{}",
+            Uuid::new_v4()
+        ));
+        let file = root.join("action-audit.jsonl");
+        let legacy_line = r#"{"id":"legacy-carriage-return","timestamp":123,"action":"test_action","stage":"test_stage","confirmed":true,"status":"success","message":"legacy message","reversible":true,"privilege":"none"}"#;
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&file, format!("{legacy_line}\r")).unwrap();
+
+        let outcome = test_verified_outcome();
+        let record = ActionAuditRecord {
+            action: "refresh_health",
+            stage: "verified",
+            confirmed: true,
+            status: "success",
+            message: "action completed",
+            reversible: true,
+            privilege: "none",
+            verification_status: "verified",
+            verification_message: "verified",
+            outcome: &outcome,
+        };
+
+        let appended = record_audit_entry(&record, &file).unwrap();
+        let history = read_audit_history(&file).unwrap();
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].id, "legacy-carriage-return");
+        assert_eq!(history[0].verification_status, "legacy");
+        assert_eq!(history[1], appended);
+
+        let contents = std::fs::read(&file).unwrap();
+        assert!(contents.starts_with(format!("{legacy_line}\r\n").as_bytes()));
+        assert!(contents.ends_with(b"\n"));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn record_appends_after_unterminated_legacy_record() {
         let root = std::env::temp_dir().join(format!(
             "linux-powerhouse-audit-unterminated-append-{}",
