@@ -345,7 +345,7 @@ fn audit_path_from_environment(
             .join("action-audit.jsonl"));
     }
 
-    if let Some(home) = home {
+    if let Some(home) = home.filter(|path| PathBuf::from(path).is_absolute()) {
         return Ok(PathBuf::from(home)
             .join(".local")
             .join("state")
@@ -419,6 +419,16 @@ mod tests {
                 .join("state")
                 .join("linux-powerhouse")
                 .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
+    fn audit_path_rejects_relative_home_directory() {
+        let error = audit_path_from_environment(None, Some("relative/home")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
         );
     }
 
