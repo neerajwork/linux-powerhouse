@@ -569,6 +569,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_vertical_tab_only_home_directory() {
+        let error = audit_path_from_environment(None, Some("\x0B")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_relative_xdg_and_home_directories() {
         let error =
             audit_path_from_environment(Some("relative/state"), Some("relative/home")).unwrap_err();
