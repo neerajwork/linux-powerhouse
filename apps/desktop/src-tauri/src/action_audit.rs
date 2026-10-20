@@ -519,6 +519,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_tab_only_home_directory() {
+        let error = audit_path_from_environment(None, Some("\t")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_relative_home_directory() {
         let error = audit_path_from_environment(None, Some("relative/home")).unwrap_err();
 
