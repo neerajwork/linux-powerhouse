@@ -609,6 +609,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_three_per_em_space_only_home_directory() {
+        let error = audit_path_from_environment(None, Some("\u{2004}")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_relative_xdg_and_home_directories() {
         let error =
             audit_path_from_environment(Some("relative/state"), Some("relative/home")).unwrap_err();
