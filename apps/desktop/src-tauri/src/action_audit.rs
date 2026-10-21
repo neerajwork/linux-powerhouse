@@ -577,6 +577,7 @@ mod tests {
             "unable to determine a local state directory for the action audit"
         );
     }
+
     #[test]
     fn audit_path_rejects_non_breaking_space_only_home_directory() {
         let error = audit_path_from_environment(None, Some("\u{00A0}")).unwrap_err();
@@ -596,6 +597,17 @@ mod tests {
             "unable to determine a local state directory for the action audit"
         );
     }
+
+    #[test]
+    fn audit_path_rejects_en_space_only_home_directory() {
+        let error = audit_path_from_environment(None, Some("\u{2002}")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
     #[test]
     fn audit_path_rejects_relative_xdg_and_home_directories() {
         let error =
