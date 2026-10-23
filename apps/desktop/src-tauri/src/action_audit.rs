@@ -729,6 +729,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_paragraph_separator_only_home_directory() {
+        let error = audit_path_from_environment(None, Some("\u{2029}")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_narrow_no_break_space_only_home_directory() {
         let error = audit_path_from_environment(None, Some("\u{202F}")).unwrap_err();
 
