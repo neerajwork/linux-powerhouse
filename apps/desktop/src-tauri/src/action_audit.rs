@@ -809,6 +809,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_padded_narrow_no_break_space_home_directory() {
+        let error = audit_path_from_environment(None, Some(" \u{202F} ")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_medium_mathematical_space_only_home_directory() {
         let error = audit_path_from_environment(None, Some("\u{205F}")).unwrap_err();
 
