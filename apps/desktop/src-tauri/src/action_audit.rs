@@ -719,6 +719,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_padded_hair_space_home_directory() {
+        let error = audit_path_from_environment(None, Some(" \u{200A} ")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_zero_width_space_only_home_directory() {
         let error = audit_path_from_environment(None, Some("\u{200B}")).unwrap_err();
 
