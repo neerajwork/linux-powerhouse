@@ -719,6 +719,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_padded_six_per_em_space_home_directory() {
+        let error = audit_path_from_environment(None, Some(" \u{2006} ")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_figure_space_only_home_directory() {
         let error = audit_path_from_environment(None, Some("\u{2007}")).unwrap_err();
 
