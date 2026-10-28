@@ -759,6 +759,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_padded_punctuation_space_home_directory() {
+        let error = audit_path_from_environment(None, Some(" \u{2008} ")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_thin_space_only_home_directory() {
         let error = audit_path_from_environment(None, Some("\u{2009}")).unwrap_err();
 
