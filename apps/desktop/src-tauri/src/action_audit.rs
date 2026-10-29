@@ -393,6 +393,18 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_prefers_root_xdg_state_home_over_root_home() {
+        let path = audit_path_from_environment(Some("/"), Some("/")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
     fn audit_path_prefers_root_xdg_state_home() {
         let path = audit_path_from_environment(Some("/"), Some("/tmp/home")).unwrap();
 
