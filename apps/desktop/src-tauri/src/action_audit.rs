@@ -441,6 +441,20 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_falls_back_to_root_home() {
+        let path = audit_path_from_environment(None, Some("/")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/")
+                .join(".local")
+                .join("state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
     fn audit_path_falls_back_to_home() {
         let path = audit_path_from_environment(None, Some("/tmp/home")).unwrap();
 
