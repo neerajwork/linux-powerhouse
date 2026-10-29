@@ -417,6 +417,18 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_prefers_xdg_state_home_when_home_has_surrounding_whitespace() {
+        let path = audit_path_from_environment(Some("/tmp/state"), Some("  /tmp/home  ")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
     fn audit_path_prefers_xdg_state_home_when_home_is_missing() {
         let path = audit_path_from_environment(Some("/tmp/state"), None).unwrap();
 
