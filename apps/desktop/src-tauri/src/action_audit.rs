@@ -467,6 +467,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_padded_root_home() {
+        let error = audit_path_from_environment(None, Some(" / ")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_falls_back_to_home() {
         let path = audit_path_from_environment(None, Some("/tmp/home")).unwrap();
 
