@@ -1134,6 +1134,16 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_whitespace_xdg_and_missing_home() {
+        let error = audit_path_from_environment(Some("   "), None).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_requires_a_local_state_directory() {
         let error = audit_path_from_environment(None, None).unwrap_err();
 
