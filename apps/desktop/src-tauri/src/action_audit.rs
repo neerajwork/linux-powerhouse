@@ -537,6 +537,18 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_prefers_xdg_state_home_when_home_has_padded_vertical_tab() {
+        let path = audit_path_from_environment(Some("/tmp/state"), Some(" \x0B ")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
     fn audit_path_falls_back_to_root_home() {
         let path = audit_path_from_environment(None, Some("/")).unwrap();
 
