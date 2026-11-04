@@ -709,6 +709,17 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_rejects_home_directory_with_unicode_surrounding_whitespace() {
+        let error =
+            audit_path_from_environment(None, Some("\u{2003}/tmp/home\u{2003}")).unwrap_err();
+
+        assert_eq!(
+            error,
+            "unable to determine a local state directory for the action audit"
+        );
+    }
+
+    #[test]
     fn audit_path_rejects_empty_home_directory() {
         let error = audit_path_from_environment(None, Some("")).unwrap_err();
 
