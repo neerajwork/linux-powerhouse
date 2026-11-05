@@ -549,6 +549,18 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_prefers_xdg_state_home_when_home_is_punctuation_space_only() {
+        let path = audit_path_from_environment(Some("/tmp/state"), Some("\u{2008}")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
     fn audit_path_prefers_xdg_state_home_when_home_is_tab_only() {
         let path = audit_path_from_environment(Some("/tmp/state"), Some("\t")).unwrap();
 
