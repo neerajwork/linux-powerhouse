@@ -13,6 +13,50 @@ Linux Powerhouse is being developed as a local-first system intelligence platfor
 - **Bounded data:** retained local history must have explicit limits and safe reset behavior.
 - **No silent privilege escalation:** privileged operations require explicit user intent and appropriate authorization.
 
+## Current Implementation Snapshot
+
+This snapshot describes the implementation on `main`, not the longer-term
+product vision.
+
+### Architecture
+
+- Rust workspace containing 15 library crates and one Tauri desktop crate.
+- Desktop application built with Tauri 2, React 19, TypeScript, and Vite.
+- Capability-oriented architecture built around system intelligence,
+  tool registration, policy evaluation, and bounded execution.
+- Linux-focused status, monitoring, intelligence, and health components.
+
+### Implemented capabilities
+
+- System, storage, process, and network status.
+- Storage, process, network, and service intelligence.
+- Unified system intelligence and deterministic health evaluation.
+- Performance monitoring, history, anomaly explanations, and drill-down.
+- Alert decisions, local alert history, evidence, and remediation guidance.
+- Action previews, explicit confirmation, scoped authorization, and
+  allowlisted diagnostic actions.
+- Execution-result verification, derived outcomes, remediation suggestions,
+  and structured action auditing.
+
+The current action path is deliberately narrow. It does not provide an
+unrestricted shell, arbitrary command execution, or general privileged
+system administration.
+
+### Persistence and validation
+
+- Local alert-history persistence.
+- JSONL action-audit persistence with record validation and legacy handling.
+- XDG state-directory resolution with a HOME-based fallback.
+- Separate Rust CI and Desktop CI workflows.
+- Desktop CI builds and verifies a Debian 12 package.
+
+### Current milestone
+
+**Step 403 is complete and merged.** Recent work has concentrated on
+audit persistence correctness, parser resilience, lifecycle validation,
+and robust XDG/HOME path resolution. Many recent increments are
+regression-test-only hardening rather than separate user-facing features.
+
 ## Recovered completed roadmap milestones
 
 The repository's historical PRs and branch names recover the roadmap from **Step 7 onward**. Steps 1–6 are not represented by dedicated feature branches in the available GitHub history, so they remain unreconstructed.
@@ -221,26 +265,127 @@ Status: **Complete**.
 - Reject unknown action identifiers deterministically.
 - Keep confirmation local, bounded, non-privileged, and non-executable.
 
-### Step 65 — Execution Eligibility Gate
-Status: **In progress**.
+### Steps 65–69 — Execution Safety and Outcome Lifecycle
 
-Define the safety boundary between explicit user intent and any future action execution.
+| Step | Milestone | Status |
+| --- | --- | --- |
+| 65 | Execution Eligibility Gate | Complete |
+| 66 | Scoped Action Authorization | Complete |
+| 67 | Explicit Action Execution Boundary | Complete |
+| 68 | Execution Result Verification Boundary | Complete |
+| 69 | Action Outcome Recording Boundary | Complete |
 
-Acceptance goals:
+These milestones establish separate boundaries for eligibility, explicit
+authorization, narrowly allowlisted action execution, result verification,
+and outcome derivation. Confirmation alone does not grant authorization.
+The implemented diagnostic actions remain bounded and read-only.
 
-- Represent execution eligibility as a deterministic, serializable result.
-- Require confirmation, authorization, and executable capability before an action can be considered eligible.
-- Reject privileged actions from the current non-privileged execution path.
-- Make explicit that confirmation alone never grants execution eligibility.
-- Keep the eligibility evaluation local, bounded, deterministic, and non-mutating.
-- Introduce no shell execution, process termination, file deletion, service restart, network mutation, or privilege escalation.
-- Preserve a clear architectural boundary for a later narrowly scoped execution milestone.
+### Steps 70–73 — Audit Lifecycle Foundation
+
+| Step | Milestone | Status |
+| --- | --- | --- |
+| 70 | Connect Action Outcomes to Audit | Complete |
+| 71 | Strengthen Action Outcome Audit Integrity | Complete |
+| 72 | Strengthen Audit Record Identity | Complete |
+| 73 | Make Audit History Resilient | Complete |
+
+This work connects derived outcomes to persisted audit records, strengthens
+record identity, and ensures malformed individual history records do not
+hide otherwise valid records.
+
+### Steps 74–108 — Audit Record and Lifecycle Validation
+
+**Status: Complete.**
+
+This sequence strengthens the persisted audit contract through focused
+validation increments, including:
+
+- Unique, non-empty record identities and valid timestamps.
+- Required content fields and supported action, stage, status, privilege,
+  reversibility, and confirmation values.
+- Consistency between stage, execution status, verification status, and
+  outcome status.
+- Matching action identity across execution, verification, and outcome
+  evidence.
+- Validation before persistence and during history loading.
+- Preservation of compatibility with legacy audit records.
+- Rejection of inconsistent lifecycle evidence without discarding valid
+  neighboring history.
+
+### Steps 109–189 — Remediation Contracts and Serialization
+
+**Status: Complete.**
+
+This sequence hardens deterministic remediation suggestions and their
+Tauri command boundary. Coverage includes:
+
+- Supported, unknown, unsupported, and future action identifiers.
+- Success, completed, failed, and unsupported status combinations.
+- Verification-state gating, including empty, pending, legacy, unknown,
+  and whitespace-padded values.
+- Stable action identity, suggested action, reason, and confirmation
+  requirements.
+- Canonical outcome and evidence messages.
+- Consistent JSON serialization for populated and empty suggestion results.
+- Command-level serialization matrices for success, completion, failure,
+  and rejected or no-suggestion cases.
+
+These increments primarily validate and preserve the remediation contract;
+they do not represent a new remediation feature in every step.
+
+### Steps 190–305 — Audit Persistence and Parser Resilience
+
+**Status: Complete.**
+
+This sequence strengthens the JSONL audit persistence boundary and its
+failure behavior. It covers:
+
+- Recording and reading history through path-aware boundaries.
+- Missing files, filesystem failures, and propagation of open, write,
+  read, and reader errors.
+- Mixed valid, malformed, blank, and duplicate records.
+- Duplicate IDs and duplicate JSON keys.
+- Invalid, missing, null, blank, and incorrectly typed fields.
+- Legacy-record compatibility and persistence round trips.
+- Invalid UTF-8, partial records, truncated records, and malformed JSON.
+- Empty input, whitespace-only input, unterminated final records, and
+  final records without a newline.
+- CRLF and BOM-prefixed history.
+- Appending records after legacy, empty, newline-only, or unterminated
+  history.
+- Rejection of invalid audit evidence before filesystem side effects.
+
+The emphasis is deterministic recovery, preservation of valid history,
+and explicit error handling rather than silently accepting corrupted data.
+
+### Steps 306–403 — Audit State-Path Resolution and Environment Hardening
+
+**Status: Complete.**
+
+This sequence validates the location used for local action-audit state:
+
+- Prefer a valid absolute `XDG_STATE_HOME`.
+- Fall back to a valid absolute `HOME`-based
+  `.local/state/linux-powerhouse/action-audit.jsonl` path.
+- Reject missing, empty, relative, whitespace-only, padded, or otherwise
+  invalid directory values when no valid fallback exists.
+- Cover root paths, trailing separators, and XDG/HOME precedence.
+- Exercise ASCII control whitespace and a broad range of Unicode
+  whitespace characters in both environment values.
+- Verify invalid XDG values fall back correctly and valid XDG values
+  take precedence over invalid HOME values.
+
+A substantial portion of these steps is regression-test-only. The purpose
+is to make path-resolution behavior explicit and resistant to subtle
+environment-value edge cases.
 
 ## Subsequent expansion areas
 
-After the deterministic alert confirmation boundary, future roadmap areas should continue to be evaluated against architecture, safety, privacy, and user value. Candidate areas include:
+With the bounded, audited diagnostic-action foundation in place, future
+roadmap areas should continue to be evaluated against architecture, safety,
+privacy, and user value. Candidate areas include:
 
-1. **Explicit Action Execution** — introduce narrowly scoped execution only after confirmation, authorization, privilege, audit, and verification requirements are satisfied.
+1. **Expanded Action Capabilities** — consider additional narrowly scoped system actions only after their authorization, confirmation, privilege, audit, verification, and recovery requirements are defined and validated.
 2. **Cross-subsystem Alert Correlation** — connect alert categories with deeper performance, process, service, and network evidence.
 3. **Network Intelligence expansion** — connectivity quality, DNS, service reachability, and network trends.
 4. **Security Posture** — local security signals, configuration visibility, and safe recommendations.
