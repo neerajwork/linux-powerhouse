@@ -2,93 +2,120 @@
 
 **Powerful Linux. Simplified for everyone.**
 
-Linux Powerhouse is an open-source, AI-powered desktop toolkit that brings the power of Linux's CLI tools, system utilities, automation, diagnostics, local AI, and open-source ecosystem to everyone through a safe, intuitive graphical experience.
+Linux Powerhouse is an open-source, local-first Linux desktop application focused on system intelligence, monitoring, health insights, and safe system actions.
+
+It aims to make Linux capabilities easier to understand and use through an intuitive graphical experience, deterministic system intelligence, and carefully controlled operations.
 
 ## Vision
 
-Linux already contains an extraordinary collection of powerful tools. The problem is that much of that power remains inaccessible to people who are not comfortable with terminals, command syntax, system administration, or complex configuration.
+Linux already provides powerful system tools and interfaces. Linux Powerhouse aims to bring these capabilities together in a human-friendly desktop experience.
 
-Linux Powerhouse aims to become the human-friendly layer over that ecosystem:
+The long-term vision is to help users:
 
-- **Discover** powerful Linux capabilities without memorizing commands.
-- **Understand** what is happening on a Linux system through clear visualizations and explanations.
-- **Ask AI** for help using natural language.
-- **Act safely** through structured tools, permissions, previews, and verification.
-- **Automate** repeatable workflows without turning the application into an unrestricted shell.
-- **Extend** the platform through a secure, capability-oriented plugin ecosystem.
+- **Understand** system activity, resource usage, and system health.
+- **Discover** useful Linux capabilities without memorizing commands.
+- **Investigate** issues using clear evidence and subsystem intelligence.
+- **Act safely** through explicit confirmation, scoped authorization, and verification.
+- **Automate** repeatable workflows within clearly defined safety boundaries.
+- **Extend** functionality through a capability-oriented ecosystem.
 
 ## Core principle
 
 > **AI proposes. Tools constrain. Policies decide. Permissions authorize. Linux enforces. Verification confirms. The user remains in control.**
 
-Linux Powerhouse will not treat an AI model as a trusted administrator. AI requests are translated into structured capabilities defined by the Tool Registry and then evaluated by deterministic safety and permission layers before execution.
+AI must not be treated as a trusted system administrator. Any future AI-assisted operation must use structured capabilities and pass deterministic policy, authorization, execution, and verification boundaries.
+
+## Current development status
+
+**Active development — system intelligence and safe-action foundation implemented.**
+
+Linux Powerhouse has progressed beyond its initial architecture and bootstrap stage.
+
+The current implementation includes:
+
+- A Rust workspace with 15 library crates and a Tauri desktop crate.
+- A desktop application built with Tauri 2, React 19, TypeScript, and Vite.
+- System, storage, process, network, and service status and intelligence.
+- Unified system intelligence and deterministic health evaluation.
+- Performance monitoring, history, anomaly explanations, and drill-down.
+- Alert decisions, local alert history, evidence, and remediation guidance.
+- Action previews, explicit confirmation, scoped authorization, and allowlisted diagnostic actions.
+- Execution-result verification, derived outcomes, remediation suggestions, and structured action auditing.
+- Local persistence with validation and resilience for alert and action history.
+
+The current action capabilities are deliberately narrow and bounded. Linux Powerhouse does not provide an unrestricted shell, arbitrary command execution, or general privileged system administration.
+
+Recent development has emphasized audit persistence correctness, parser resilience, lifecycle validation, and robust XDG/HOME state-path handling.
+
+For the detailed implementation history and completed milestones, see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Architecture
 
+The project uses a capability-oriented architecture that separates system intelligence from controlled actions.
+
+### System intelligence
+
 ```text
-                         USER
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │     GUI     │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │     AI      │
-                    │  UNTRUSTED  │
-                    └──────┬──────┘
-                           │
-                    Structured Intent
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │    TOOL     │
-                    │   REGISTRY  │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │    POLICY   │
-                    │    ENGINE   │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │ PERMISSION  │
-                    │    ENGINE   │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  EXECUTION  │
-                    │    ENGINE   │
-                    └──────┬──────┘
-                           │
-                           ▼
-                         LINUX
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │ VERIFICATION│
-                    └─────────────┘
+Linux system interfaces
+        |
+        v
+Status and observation crates
+        |
+        v
+Subsystem intelligence
+        |
+        v
+Unified system intelligence
+        |
+        v
+Monitoring and health evaluation
+        |
+        v
+Desktop presentation
 ```
 
-## Initial technology direction
+### Controlled action lifecycle
 
-The first implementation is intentionally small and Linux-native:
+```text
+User intent
+    |
+    v
+Action preview
+    |
+    v
+Explicit confirmation
+    |
+    v
+Eligibility and policy evaluation
+    |
+    v
+Scoped authorization
+    |
+    v
+Allowlisted execution
+    |
+    v
+Result verification
+    |
+    v
+Outcome derivation and audit
+```
 
-- **Desktop:** Tauri
-- **Frontend:** React + TypeScript
-- **Core:** Rust
-- **Persistence:** SQLite
-- **Async runtime:** Tokio
-- **Linux integration:** D-Bus, systemd, UDisks2, `/proc`, `/sys`
-- **Privilege mediation:** Polkit
-- **AI runtime:** provider abstraction with local-first support for Ollama and llama.cpp
-- **Initial model candidates:** Qwen3 and Phi-family local models, subject to hardware and license validation
+These paths have distinct responsibilities. System observations remain read-only by default. Actions require explicit user intent and must pass the applicable safety boundaries.
 
-External utilities such as `smartmontools`, `ripgrep`, `fd`, `restic`, FFmpeg, Tesseract, and others will be integrated selectively through the Tool Registry rather than copied or reinvented.
+## Technology stack
+
+| Area | Technology |
+|---|---|
+| Core and system logic | Rust |
+| Desktop framework | Tauri 2 |
+| Frontend | React 19, TypeScript |
+| Frontend build | Vite |
+| Serialization | Serde and JSON |
+| Linux integration | Linux system interfaces and platform facilities |
+| Testing | Rust unit and integration tests, Rust CI and Desktop CI |
+
+The project integrates with Linux capabilities through dedicated components rather than treating arbitrary shell execution as its application interface.
 
 ## Repository layout
 
@@ -96,78 +123,54 @@ External utilities such as `smartmontools`, `ripgrep`, `fd`, `restic`, FFmpeg, T
 linux-powerhouse/
 ├── apps/
 │   └── desktop/             # Tauri desktop application
-├── crates/
-│   ├── powerhouse-core/     # Shared domain types and application primitives
-│   ├── tool-registry/       # Capability definitions and schemas
-│   ├── policy-engine/       # Risk and policy evaluation
-│   └── execution-engine/    # Validated tool execution and verification
+├── crates/                  # Rust capability and intelligence crates
 ├── docs/
 │   ├── architecture/
 │   ├── security/
 │   └── tools/
-├── schemas/                 # Machine-readable registry schemas
+├── schemas/                 # Machine-readable schemas
 ├── scripts/                 # Development and CI helpers
 ├── tests/                   # Integration and security tests
-└── .github/                 # CI, issue templates, and repository automation
+└── .github/                 # CI and repository automation
 ```
 
-## Development status
+## Development roadmap
 
-**Early architecture / bootstrap stage.**
+The project is being developed incrementally, with focused changes and validation through Rust and Desktop CI.
 
-The project is currently establishing its core architecture, Tool Registry, AI safety model, and development infrastructure before implementing user-facing capabilities.
+Current and future areas of development include:
 
-## Roadmap
+- Continued system intelligence and health improvements.
+- Expanded subsystem evidence and cross-subsystem correlation.
+- Carefully scoped system-action capabilities.
+- Security posture and network intelligence.
+- Explainable resource optimization.
+- Bounded automation workflows.
+- Localization and broader desktop usability.
+- A capability-oriented Linux tool ecosystem.
 
-### Phase 1 — Foundation
+These are development directions, not claims that all capabilities are already implemented.
 
-- [x] Product vision
-- [x] MVP architecture
-- [x] Tool Registry specification
-- [x] AI safety and execution model
-- [x] Initial open-source technology inventory
-- [ ] Rust workspace and desktop shell
-- [ ] Tool Registry MVP
-- [ ] Policy engine MVP
-- [ ] Execution engine MVP
-- [ ] CI and security scanning
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the implementation snapshot, completed milestones, development principles, and future expansion areas.
 
-### Phase 2 — First useful release
+## Development principles
 
-- System dashboard
-- Storage analyzer
-- Large-file finder
-- Duplicate-file finder
-- File search
-- Disk-health diagnostics
-- AI assistant with safe tool calling
-- Action history and verification
-
-### Phase 3 — Linux Powerhouse ecosystem
-
-- Backup workflows
-- Network diagnostics
-- Document/OCR tools
-- Media tools
-- Application/package management
-- Local AI model manager
-- Plugin system
-- Automation workflows
-
-## Open-source philosophy
-
-Linux Powerhouse will prefer mature open-source technologies over reinventing proven infrastructure. The project's unique contribution is the integration layer: human-friendly UX, AI orchestration, safety, permissions, tool discovery, verification, and automation.
-
-Every dependency and model will be evaluated for license compatibility, security, maintenance health, and suitability for redistribution.
+- **Local-first:** system observations and preferences remain local unless an explicit sharing or export operation is requested.
+- **Read-only by default:** monitoring and intelligence do not automatically mutate system state.
+- **Explicit actions:** operations must be previewed, confirmed, narrowly scoped, and auditable.
+- **Deterministic safety:** policies and authorization boundaries must not depend on AI judgment.
+- **Incremental delivery:** changes are developed and validated in focused steps.
+- **Bounded persistence:** local history has explicit retention and recovery behavior.
+- **No silent privilege escalation:** privileged operations require explicit intent and appropriate authorization.
 
 ## Contributing
 
-The project is being built in public. Early contributions, architectural discussion, testing, documentation, security review, UX ideas, and Linux distribution feedback are welcome.
+Linux Powerhouse is being developed in public. Contributions involving architecture, Rust, Linux integration, testing, documentation, security review, and desktop UX are welcome.
 
-Contribution guidelines will be added as the initial development workflow is established.
+Please review the repository roadmap and existing project conventions before proposing substantial changes.
 
 ## License
 
 Linux Powerhouse is licensed under the Apache License 2.0. See [`LICENSE`](LICENSE) for details.
 
-Third-party dependencies and AI models may carry their own licenses and terms. They remain the responsibility of their respective projects and will be documented as integrations are added.
+Third-party dependencies and integrations may have their own licenses and terms. They remain subject to their respective projects and should be reviewed before redistribution.
