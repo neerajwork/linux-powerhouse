@@ -817,6 +817,20 @@ mod tests {
     }
 
     #[test]
+    fn audit_path_falls_back_to_home_when_xdg_state_home_is_en_space_only() {
+        let path = audit_path_from_environment(Some("\u{2002}"), Some("/tmp/home")).unwrap();
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/home")
+                .join(".local")
+                .join("state")
+                .join("linux-powerhouse")
+                .join("action-audit.jsonl")
+        );
+    }
+
+    #[test]
     fn audit_path_falls_back_to_home_when_xdg_state_home_has_surrounding_whitespace() {
         let path = audit_path_from_environment(Some("  /tmp/state  "), Some("/tmp/home")).unwrap();
 
