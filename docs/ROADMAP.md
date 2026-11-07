@@ -52,10 +52,12 @@ system administration.
 
 ### Current milestone
 
-**Step 403 is complete and merged.** Recent work has concentrated on
+**Step 408 is complete and merged.** Recent work has concentrated on
 audit persistence correctness, parser resilience, lifecycle validation,
-and robust XDG/HOME path resolution. Many recent increments are
-regression-test-only hardening rather than separate user-facing features.
+and robust XDG/HOME path resolution. Steps 404–408 extended regression
+coverage for Unicode whitespace handling in XDG state-path resolution.
+Many recent increments are regression-test-only hardening rather than
+separate user-facing features.
 
 ## Recovered completed roadmap milestones
 
@@ -358,7 +360,7 @@ failure behavior. It covers:
 The emphasis is deterministic recovery, preservation of valid history,
 and explicit error handling rather than silently accepting corrupted data.
 
-### Steps 306–403 — Audit State-Path Resolution and Environment Hardening
+### Steps 306–408 — Audit State-Path Resolution and Environment Hardening
 
 **Status: Complete.**
 
@@ -374,6 +376,8 @@ This sequence validates the location used for local action-audit state:
   whitespace characters in both environment values.
 - Verify invalid XDG values fall back correctly and valid XDG values
   take precedence over invalid HOME values.
+- Extend regression coverage for Unicode whitespace-only XDG_STATE_HOME
+  values, verifying fallback to a valid HOME-based state directory.
 
 A substantial portion of these steps is regression-test-only. The purpose
 is to make path-resolution behavior explicit and resistant to subtle
