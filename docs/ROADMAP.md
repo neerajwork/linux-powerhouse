@@ -59,6 +59,45 @@ coverage for Unicode whitespace handling in XDG state-path resolution.
 Many recent increments are regression-test-only hardening rather than
 separate user-facing features.
 
+## Localization architecture and planning
+
+**Status: Architecture and planning complete; implementation not started.**
+
+The approved localization specification is documented in
+[`docs/architecture/LOCALIZATION.md`](architecture/LOCALIZATION.md).
+
+The initial localization scope is English (`en`) and Kannada (`kn`),
+using i18next/react-i18next, feature-based JSON namespaces, BCP 47 locale
+identifiers, saved user preference precedence, controlled Linux locale
+detection through Tauri, centralized `Intl` formatting, and a typed Rust
+message-code contract.
+
+The planning work covers the UI translation inventory, translation-key
+architecture, locale detection and persistence, formatting, migration
+sequence, and testing/acceptance criteria. All six planning areas and the
+L1 architecture have been approved.
+
+### Planned implementation milestones
+
+These are planning milestones, not assigned roadmap step numbers:
+
+| Milestone | Scope | Completion condition |
+| --- | --- | --- |
+| M1 — Localization Foundation | Dependencies, initialization, locale normalization, system-locale interface, and preference persistence | Locale selection and fallback work reliably |
+| M2 — Shared Resources and Shell | Common resources, application shell, and language selector | English/Kannada switching works without restart |
+| M3 — Frontend Feature Migration | Dashboard, health, actions, alerts, history, insights, performance, and audit namespaces | Planned frontend coverage and feature regressions pass |
+| M4 — Backend Message Contract | Typed Rust message codes, structured parameters, and frontend resolution | Known messages localize and historical audit messages remain unchanged |
+| M5 — Centralized Formatting | Dates, times, numbers, percentages, bytes, durations, and currency | Shared formatters are adopted without changing underlying values |
+| M6 — Kannada and Final QA | Translation review, accessibility, layout, and full regression | Kannada quality and project acceptance criteria pass |
+
+Milestones may be split into multiple small pull requests. Exact step
+numbers and implementation dependencies will be assigned only after a
+separate implementation breakdown is reviewed and approved.
+
+**Step 409 remains on hold.** No localization implementation step numbers
+have been assigned, and no localization code or dependencies have been
+introduced by this planning work.
+
 ## Recovered completed roadmap milestones
 
 The repository's historical PRs and branch names recover the roadmap from **Step 7 onward**. Steps 1–6 are not represented by dedicated feature branches in the available GitHub history, so they remain unreconstructed.
