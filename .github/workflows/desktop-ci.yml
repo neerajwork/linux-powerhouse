@@ -30,6 +30,16 @@ jobs:
             librsvg2-dev \
             pkg-config
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify Node.js version
+        run: |
+          node --version
+          npm --version
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -41,6 +51,10 @@ jobs:
       - name: Install frontend dependencies
         working-directory: apps/desktop
         run: npm install
+
+      - name: Run frontend tests
+        working-directory: apps/desktop
+        run: npm test
 
       - name: Generate Tauri icons
         working-directory: apps/desktop
