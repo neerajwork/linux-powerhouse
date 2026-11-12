@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizePosixLocale } from "../../src/localization/locale.ts";
+import {
+  normalizePosixLocale,
+  resolveSupportedLocale,
+} from "../../src/localization/locale.ts";
 
 test("normalizes language, territory, and encoding", () => {
   assert.equal(normalizePosixLocale("en_US.UTF-8"), "en-US");
@@ -103,4 +106,32 @@ test("rejects the POSIX locale with a modifier", () => {
 
 test("normalizes a locale with an uppercase Latin modifier", () => {
   assert.equal(normalizePosixLocale("sr_RS@LATIN"), "sr-Latn-RS");
+});
+
+test("resolves regional English locale to en", () => {
+  assert.equal(resolveSupportedLocale("en-IN"), "en");
+});
+
+test("resolves regional Kannada locale to kn", () => {
+  assert.equal(resolveSupportedLocale("kn-IN"), "kn");
+});
+
+test("resolves unsupported language to English", () => {
+  assert.equal(resolveSupportedLocale("fr-FR"), "en");
+});
+
+test("resolves a missing locale to English", () => {
+  assert.equal(resolveSupportedLocale(null), "en");
+});
+
+test("resolves a malformed locale to English", () => {
+  assert.equal(resolveSupportedLocale("kn--IN"), "en");
+});
+
+test("resolves an empty locale to English", () => {
+  assert.equal(resolveSupportedLocale(""), "en");
+});
+
+test("resolves a whitespace-only locale to English", () => {
+  assert.equal(resolveSupportedLocale("   "), "en");
 });
