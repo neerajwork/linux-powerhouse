@@ -123,3 +123,25 @@ export function resolveSupportedLocale(
     return "en";
   }
 }
+
+/**
+ * Selects the application locale using saved preference precedence.
+ *
+ * Exact supported saved preferences take priority over the system locale.
+ * Unsupported, regional, or malformed preferences fall back to the
+ * system locale.
+ */
+export function selectApplicationLocale(
+  savedPreference: string | null,
+  systemLocale: string | null,
+): string {
+  if (savedPreference !== null) {
+    const preferredLocale = resolveSupportedLocale(savedPreference);
+
+    if (preferredLocale === savedPreference) {
+      return preferredLocale;
+    }
+  }
+
+  return resolveSupportedLocale(systemLocale);
+}
