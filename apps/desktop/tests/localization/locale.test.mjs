@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   normalizePosixLocale,
   resolveSupportedLocale,
+  selectApplicationLocale,
 } from "../../src/localization/locale.ts";
 
 test("normalizes language, territory, and encoding", () => {
@@ -134,4 +135,46 @@ test("resolves an empty locale to English", () => {
 
 test("resolves a whitespace-only locale to English", () => {
   assert.equal(resolveSupportedLocale("   "), "en");
+});
+
+test("prefers saved locale over system locale", () => {
+  assert.equal(
+    selectApplicationLocale("kn", "en-US"),
+    "kn",
+  );
+});
+
+test("prefers saved English locale over Kannada system locale", () => {
+  assert.equal(
+    selectApplicationLocale("en", "kn-IN"),
+    "en",
+  );
+});
+
+test("uses system locale when saved preference is missing", () => {
+  assert.equal(
+    selectApplicationLocale(null, "kn-IN"),
+    "kn",
+  );
+});
+
+test("uses system locale when saved preference is unsupported", () => {
+  assert.equal(
+    selectApplicationLocale("fr-FR", "kn-IN"),
+    "kn",
+  );
+});
+
+test("uses system locale when saved preference is malformed", () => {
+  assert.equal(
+    selectApplicationLocale("kn--IN", "kn-IN"),
+    "kn",
+  );
+});
+
+test("falls back to English when system locale is unsupported", () => {
+  assert.equal(
+    selectApplicationLocale(null, "fr-FR"),
+    "en",
+  );
 });
