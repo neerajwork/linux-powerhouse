@@ -91,3 +91,35 @@ export function normalizePosixLocale(locale: string): string | null {
     return null;
   }
 }
+
+/**
+ * Resolves a normalized BCP 47 locale to a supported application locale.
+ *
+ * Regional variants resolve to their supported base language.
+ * Unsupported, malformed, or missing locales fall back to English.
+ */
+export function resolveSupportedLocale(
+  locale: string | null,
+): string {
+  if (locale === null) {
+    return "en";
+  }
+
+  try {
+    const canonicalLocale = Intl.getCanonicalLocales(locale)[0];
+
+    if (!canonicalLocale) {
+      return "en";
+    }
+
+    const language = canonicalLocale.split("-")[0].toLowerCase();
+
+    if (language === "kn") {
+      return "kn";
+    }
+
+    return "en";
+  } catch {
+    return "en";
+  }
+}
