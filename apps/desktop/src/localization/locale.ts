@@ -145,3 +145,34 @@ export function selectApplicationLocale(
 
   return resolveSupportedLocale(systemLocale);
 }
+
+/**
+ * Selects the application locale from ordered system locale candidates.
+ *
+ * Saved supported preferences take priority. Invalid and unsupported
+ * system candidates are skipped so lower-priority candidates can be tried.
+ */
+export function selectApplicationLocaleFromCandidates(
+  savedPreference: string | null,
+  systemLocaleCandidates: string[],
+): string {
+  if (savedPreference === "en" || savedPreference === "kn") {
+    return savedPreference;
+  }
+
+  for (const candidate of systemLocaleCandidates) {
+    const normalized = normalizePosixLocale(candidate);
+
+    if (normalized === null) {
+      continue;
+    }
+
+    const language = normalized.split("-")[0].toLowerCase();
+
+    if (language === "en" || language === "kn") {
+      return language;
+    }
+  }
+
+  return "en";
+}

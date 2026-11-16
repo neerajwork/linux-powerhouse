@@ -34,6 +34,46 @@ export default function App() {
   async function sampleMonitoring() { try { const snapshot = await invoke<MonitorSnapshot>("monitor_snapshot"); setHistory((current) => [...current.slice(-119), snapshot]); } catch (err) { setError(String(err)); } }
   useEffect(() => { void refresh(); void sampleMonitoring(); }, []);
   useEffect(() => { const timer = window.setInterval(() => { void sampleMonitoring(); }, 1000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    const initializeLocale = async () => {
+      let savedPreference: string | null = null;
+
+      try {
+        savedPreference = localStorage.getItem("linux-powerhouse.locale.v1");
+      } catch {
+        // Continue with system locale detection if storage is unavailable.
+      }
+
+      let systemLocaleCandidates: string[] = [];
+
+      try {
+        systemLocaleCandidates = await invoke<string[]>(
+          "system_locale_candidates",
+        );
+      } catch {
+        // Fall back to English or the saved preference.
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      const locale = selectApplicationLocaleFromCandidates(
+        savedPreference,
+        systemLocaleCandidates,
+      );
+
+      document.documentElement.lang = locale;
+    };
+
+    void initializeLocale();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const latest = history[history.length - 1];
   const averageCpu = useMemo(() => history.length ? history.reduce((sum, item) => sum + item.cpu_percent, 0) / history.length : 0, [history]);
   const peakCpu = useMemo(() => history.length ? Math.max(...history.map((item) => item.cpu_percent)) : 0, [history]);

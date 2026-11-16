@@ -2,6 +2,7 @@ mod action_audit;
 mod action_remediation;
 mod action_verification;
 mod alert_history_store;
+mod system_locale;
 
 use action_audit::{ActionAudit, ActionAuditEntry, ActionAuditRecord};
 use action_remediation::{RemediationSuggestion, suggest_remediation};
@@ -449,6 +450,11 @@ fn clear_alert_event_history(state: tauri::State<'_, AppState>) -> Result<(), St
     persist_alert_history(&state)
 }
 
+#[tauri::command]
+fn system_locale_candidates() -> Vec<String> {
+    system_locale::system_locale_candidates()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -502,7 +508,8 @@ pub fn run() {
             alert_guidance,
             alert_action_preview,
             alert_action_confirm,
-            clear_alert_event_history
+            clear_alert_event_history,
+            system_locale_candidates
         ])
         .run(tauri::generate_context!())
         .expect("error while running Linux Powerhouse");

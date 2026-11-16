@@ -5,6 +5,7 @@ import {
   normalizePosixLocale,
   resolveSupportedLocale,
   selectApplicationLocale,
+  selectApplicationLocaleFromCandidates,
 } from "../../src/localization/locale.ts";
 
 test("normalizes language, territory, and encoding", () => {
@@ -176,5 +177,17 @@ test("falls back to English when system locale is unsupported", () => {
   assert.equal(
     selectApplicationLocale(null, "fr-FR"),
     "en",
+  );
+});
+
+test("skips invalid and unsupported candidates in precedence order", () => {
+  assert.equal(
+    selectApplicationLocaleFromCandidates(null, [
+      "C.UTF-8",
+      "fr_FR.UTF-8",
+      "kn_IN.UTF-8",
+      "en_US.UTF-8",
+    ]),
+    "kn",
   );
 });
