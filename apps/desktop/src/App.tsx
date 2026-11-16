@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { selectApplicationLocaleFromCandidates } from "./localization/locale";
 import { ActionAudit } from "./components/ActionAudit";
 import { AlertEventHistory } from "./components/AlertEventHistory";
 import { HealthActionWorkspace } from "./components/HealthActionWorkspace";
