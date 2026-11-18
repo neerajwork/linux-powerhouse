@@ -2,8 +2,11 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 
-import en from "./resources/en.json";
-import kn from "./resources/kn.json";
+import {
+  defaultLocalizationNamespace,
+  localizationNamespaces,
+  localizationResources,
+} from "./resources";
 import { selectApplicationLocaleFromCandidates } from "./locale";
 
 const STORAGE_KEY = "linux-powerhouse.locale.v1";
@@ -22,9 +25,7 @@ async function initialize(): Promise<void> {
   let systemLocaleCandidates: string[] = [];
 
   try {
-    systemLocaleCandidates = await invoke<string[]>(
-      "system_locale_candidates",
-    );
+    systemLocaleCandidates = await invoke<string[]>("system_locale_candidates");
   } catch {
     // Fall back to the saved preference or English.
   }
@@ -35,13 +36,12 @@ async function initialize(): Promise<void> {
   );
 
   await i18n.use(initReactI18next).init({
-    resources: {
-      en: { translation: en },
-      kn: { translation: kn },
-    },
+    resources: localizationResources,
     lng: locale,
     fallbackLng: "en",
     supportedLngs: ["en", "kn"],
+    ns: [...localizationNamespaces],
+    defaultNS: defaultLocalizationNamespace,
     interpolation: {
       escapeValue: false,
     },

@@ -1,0 +1,11 @@
+{
+  "actions": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save"
+  },
+  "status": {
+    "loading": "Loading",
+    "unknown": "Unknown"
+  }
+}
