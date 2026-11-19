@@ -1,4 +1,63 @@
 {
   "name": "Linux Powerhouse",
-  "tagline": "Powerful Linux. Simplified."
+  "tagline": "Powerful Linux. Simplified.",
+  "navigation": {
+    "dashboard": "Dashboard",
+    "systemHealth": "System Health",
+    "healthWorkspace": "Health Workspace",
+    "alertHistory": "Alert History",
+    "monitoring": "Monitoring",
+    "storage": "Storage",
+    "processes": "Processes",
+    "network": "Network",
+    "actionAudit": "Action Audit",
+    "services": "Services",
+    "security": "Security",
+    "aiAssistant": "AI Assistant"
+  },
+  "sections": {
+    "dashboard": {
+      "title": "Your Linux system, at a glance.",
+      "description": "Read-only insights, collected through Linux-native capabilities."
+    },
+    "systemHealth": {
+      "title": "System Health",
+      "description": "Read-only insights, collected through Linux-native capabilities."
+    },
+    "healthWorkspace": {
+      "title": "Health Workspace",
+      "description": "A focused, explicit path from health signals to safe diagnostics."
+    },
+    "alertHistory": {
+      "title": "Alert History",
+      "description": "A local, auditable record of alert decisions."
+    },
+    "monitoring": {
+      "title": "Monitoring",
+      "description": "Live read-only metrics with a bounded in-memory history."
+    },
+    "storage": {
+      "title": "Storage",
+      "description": "Read-only insights, collected through Linux-native capabilities."
+    },
+    "processes": {
+      "title": "Processes",
+      "description": "Read-only insights, collected through Linux-native capabilities."
+    },
+    "network": {
+      "title": "Network",
+      "description": "Read-only insights, collected through Linux-native capabilities."
+    },
+    "actionAudit": {
+      "title": "Action Audit",
+      "description": "Local execution history for explicitly confirmed safe actions."
+    }
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…"
+  },
+  "errors": {
+    "readSystemData": "Unable to read system data: {{error}}"
+  }
 }
