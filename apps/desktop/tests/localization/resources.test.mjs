@@ -12,6 +12,20 @@ async function loadResource(path) {
   return JSON.parse(await readFile(resourcePath(path), "utf8"));
 }
 
+test("English application resources provide application name and tagline", async () => {
+  const app = await loadResource("en/app.json");
+
+  assert.equal(app.name, "Linux Powerhouse");
+  assert.equal(app.tagline, "Powerful Linux. Simplified.");
+});
+
+test("Kannada application resources provide application name and tagline", async () => {
+  const app = await loadResource("kn/app.json");
+
+  assert.equal(app.name, "Linux Powerhouse");
+  assert.equal(app.tagline, "ಶಕ್ತಿಯುತ ಲಿನಕ್ಸ್. ಸರಳೀಕೃತ.");
+});
+
 test("English common resources contain shared actions and statuses", async () => {
   const common = await loadResource("en/common.json");
 
@@ -30,14 +44,4 @@ test("Kannada common resources contain shared actions and statuses", async () =>
   assert.equal(common.actions.save, "ಉಳಿಸಿ");
   assert.equal(common.status.loading, "ಲೋಡ್ ಆಗುತ್ತಿದೆ");
   assert.equal(common.status.unknown, "ತಿಳಿದಿಲ್ಲ");
-});
-
-test("English and Kannada resources provide the application translation files", async () => {
-  const [en, kn] = await Promise.all([
-    loadResource("en.json"),
-    loadResource("kn.json"),
-  ]);
-
-  assert.ok(Object.keys(en).length > 0);
-  assert.ok(Object.keys(kn).length > 0);
 });
