@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { changeApplicationLocale } from "./localization/i18n";
 import { invoke } from "@tauri-apps/api/core";
 import { ActionAudit } from "./components/ActionAudit";
 import { AlertEventHistory } from "./components/AlertEventHistory";
@@ -22,7 +23,7 @@ const formatUptime = (seconds: number) => `${Math.floor(seconds / 86400)}d ${Mat
 function Sparkline({ values }: { values: number[] }) { if (values.length < 2) return <div className="spark-empty">Collecting samples…</div>; const width = 420; const height = 100; const max = Math.max(...values, 1); const min = Math.min(...values, 0); const range = Math.max(max - min, 1); const points = values.map((value, index) => `${(index / (values.length - 1)) * width},${height - ((value - min) / range) * height}`).join(" "); return <svg className="sparkline" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none"><polyline points={points} fill="none" stroke="currentColor" strokeWidth="2.5" vectorEffect="non-scaling-stroke" /></svg>; }
 
 export default function App() {
-  const { t } = useTranslation("app");
+  const { t, i18n } = useTranslation("app");
   const [section, setSection] = useState<Section>("dashboard");
   const [system, setSystem] = useState<SystemStatus | null>(null);
   const [storage, setStorage] = useState<FilesystemStatus[]>([]);
@@ -49,7 +50,7 @@ export default function App() {
       </nav>
     </aside>
     <section className="content">
-      <header className="header"><div><p className="eyebrow">{t(`navigation.${section}`).toUpperCase()}</p><h1>{t(`sections.${section}.title`)}</h1><p className="subtitle">{t(`sections.${section}.description`)}</p></div><button className="primary" onClick={() => void refresh()} disabled={loading}>{loading ? t("actions.refreshing") : t("actions.refresh")}</button></header>
+      <header className="header"><div><p className="eyebrow">{t(`navigation.${section}`).toUpperCase()}</p><h1>{t(`sections.${section}.title`)}</h1><p className="subtitle">{t(`sections.${section}.description`)}</p></div><div className="header__actions"><label className="language-selector"><span className="sr-only">{t("language.label")}</span><select aria-label={t("language.label")} value={i18n.resolvedLanguage ?? "en"} onChange={(event) => void changeApplicationLocale(event.currentTarget.value)}><option value="en">English</option><option value="kn">ಕನ್ನಡ</option></select></label><button className="primary" onClick={() => void refresh()} disabled={loading}>{loading ? t("actions.refreshing") : t("actions.refresh")}</button></div></header>
       {error && <div className="error">{t("errors.readSystemData", { error })}</div>}
       {section === "systemHealth" && <SystemHealth />}
       {section === "healthWorkspace" && <HealthActionWorkspace />}

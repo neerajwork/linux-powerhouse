@@ -58,4 +58,22 @@ export function initializeI18n(): Promise<void> {
   return initializationPromise;
 }
 
+export async function changeApplicationLocale(
+  locale: string,
+): Promise<void> {
+  if (locale !== "en" && locale !== "kn") {
+    return;
+  }
+
+  await i18n.changeLanguage(locale);
+
+  document.documentElement.lang = locale;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, locale);
+  } catch {
+    // Language switching remains available without persistence.
+  }
+}
+
 export default i18n;
