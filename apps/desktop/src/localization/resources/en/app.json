@@ -59,5 +59,8 @@
   },
   "errors": {
     "readSystemData": "Unable to read system data: {{error}}"
+  },
+  "language": {
+    "label": "Language"
   }
 }

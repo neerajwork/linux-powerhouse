@@ -39,6 +39,7 @@ test("i18next resolves English application and common translations", async () =>
   assert.equal(instance.language, "en");
   assert.equal(instance.t("name"), "Linux Powerhouse");
   assert.equal(instance.t("tagline"), "Powerful Linux. Simplified.");
+  assert.equal(instance.t("language.label"), "Language");
   assert.equal(instance.t("actions.save", { ns: "common" }), "Save");
 });
 
@@ -49,6 +50,7 @@ test("i18next switches from English to Kannada translations", async () => {
 
   assert.equal(instance.language, "kn");
   assert.equal(instance.t("tagline"), "ಶಕ್ತಿಯುತ ಲಿನಕ್ಸ್. ಸರಳೀಕೃತ.");
+  assert.equal(instance.t("language.label"), "ಭಾಷೆ");
   assert.equal(instance.t("actions.save", { ns: "common" }), "ಉಳಿಸಿ");
   assert.equal(instance.t("status.loading", { ns: "common" }), "ಲೋಡ್ ಆಗುತ್ತಿದೆ");
 });
